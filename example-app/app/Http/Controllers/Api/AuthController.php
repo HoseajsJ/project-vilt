@@ -66,7 +66,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $roleName = (int) $user->role === User::ROLE_PENGURUS ? 'pengurus' : 'warga';
+        $roleName = $user->role_name;
         $token = $this->jwtService->generateToken($user);
 
         return response()->json([

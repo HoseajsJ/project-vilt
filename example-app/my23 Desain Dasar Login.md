@@ -1,26 +1,27 @@
 # my23 — Desa Pintar RW & Karang Taruna (PRD, Database, ERD)
 
 Aplikasi desa pintar untuk RW dan Karang Taruna (Karta).
-Fase 1 mencakup: **Login, Monitoring IoT (budidaya lele, hidroponik, maggot), Kesehatan Lingkungan, Notifikasi, dan Informasi Kegiatan Karta untuk warga.**
+Fase 1 mencakup: **Login, Monitoring IoT (budidaya lele, hidroponik, maggot), Pengaduan Warga, Layanan Administrasi Surat RT/RW, Notifikasi, dan Informasi Kegiatan Karta untuk warga.**
 
 | Item | Isi |
 |---|---|
-| Versi | 0.2 (draft) |
-| Perubahan dari 0.1 | Ditambah modul IoT, budidaya, kesehatan lingkungan, kegiatan Karta, notifikasi |
-| Role | Pengurus (1), Warga (2) |
+| Versi | 0.3 (draft) |
+| Perubahan dari 0.2 | Ditambah modul administrasi surat, pengaduan warga diperluas, role pengurus RT & Karta dipisah |
+| Role | Pengurus Karta (1), Warga (2), Pengurus RT/RW (3) |
 
 ---
 
 ## 1. PRD (Product Requirements Document)
 
 ### 1.1 Latar Belakang
-RW dan Karang Taruna menjalankan beberapa usaha bersama: budidaya lele, hidroponik, dan maggot (olah sampah organik). Pengurus perlu memantau kondisi secara real time dan segera tahu jika ada masalah (misal pH kolam anjlok). Warga perlu mudah mengetahui apa saja yang dikerjakan Karta serta informasi penting lingkungan.
+RW dan Karang Taruna menjalankan usaha IoT budidaya. Pengurus Karta perlu memantau secara real time. Di sisi lain, Warga membutuhkan kemudahan layanan administrasi surat-menyurat secara online tanpa harus bolak-balik ke rumah RT, serta sistem pelaporan terpadu untuk masalah lingkungan maupun keamanan.
 
 ### 1.2 Tujuan
-1. Pengurus memantau sensor IoT tiap unit budidaya dan menerima **notifikasi peringatan** saat nilai di luar batas aman.
-2. Pengurus mencatat siklus dan aktivitas budidaya (pakan, panen, dll).
-3. Pengurus dan warga dapat melaporkan/memantau **kesehatan lingkungan**.
-4. Warga dapat melihat **kegiatan Karta** dan menerima **notifikasi informasi** yang memudahkan mereka.
+1. Pengurus Karta memantau sensor IoT tiap unit budidaya dan menerima notifikasi.
+2. Pengurus Karta mencatat aktivitas budidaya dan kelola kegiatan Karta.
+3. Warga dapat mengajukan **Permohonan Surat** secara online.
+4. Warga dapat melaporkan **Pengaduan Warga** (keamanan, infrastruktur, lingkungan) yang diteruskan ke Pengurus RT.
+5. Warga menerima informasi dan notifikasi kegiatan lingkungan.
 
 ### 1.3 Di Luar Cakupan (fase 1)
 Penjualan hasil panen/kas, iuran, registrasi mandiri warga, lupa password, kontrol aktuator IoT (hidup/matikan pompa dari aplikasi), kamera/CCTV, prediksi berbasis AI.
@@ -29,33 +30,33 @@ Penjualan hasil panen/kas, iuran, registrasi mandiri warga, lupa password, kontr
 
 | Role | Nilai | Ringkasan akses |
 |---|---|---|
-| Pengurus | 1 | Kelola semua modul, terima notifikasi peringatan IoT |
-| Warga | 2 | Lihat kegiatan Karta, ringkasan hasil, lapor lingkungan, terima notifikasi informasi |
+| Pengurus Karta | 1 | Kelola IoT budidaya, terima notif IoT, kelola kegiatan Karta |
+| Warga | 2 | Lihat kegiatan, lapor pengaduan, ajukan surat, terima notifikasi |
+| Pengurus RT | 3 | Kelola permohonan surat warga, tangani pengaduan warga |
 | Perangkat IoT | — | Bukan user. Mengirim data dengan API key perangkat |
 
 **Matriks akses**
 
-| Fitur | Pengurus | Warga |
-|---|---|---|
-| Login | ✅ | ✅ |
-| Kelola unit budidaya & perangkat | ✅ | ❌ |
-| Lihat data sensor detail & grafik | ✅ | ❌ |
-| Lihat ringkasan unit (status & hasil panen) | ✅ | ✅ (ringkas) |
-| Atur batas aman (alert rule) | ✅ | ❌ |
-| Terima notifikasi peringatan IoT | ✅ | ❌ |
-| Catat siklus & aktivitas budidaya | ✅ | ❌ |
-| Kelola kegiatan Karta | ✅ | ❌ |
-| Lihat kegiatan Karta (yang dipublikasikan) | ✅ | ✅ |
-| Buat laporan lingkungan | ✅ | ✅ |
-| Tindak lanjut laporan lingkungan | ✅ | ❌ |
-| Terima notifikasi informasi | ✅ | ✅ |
+| Fitur | P. Karta (1) | Warga (2) | P. RT (3) |
+|---|---|---|---|
+| Login | ✅ | ✅ | ✅ |
+| Kelola unit budidaya & perangkat | ✅ | ❌ | ❌ |
+| Lihat ringkasan unit IoT | ✅ | ✅ (ringkas) | ❌ |
+| Terima notif peringatan IoT | ✅ | ❌ | ❌ |
+| Kelola kegiatan Karta | ✅ | ❌ | ❌ |
+| Lihat kegiatan (published) | ✅ | ✅ | ✅ |
+| Ajukan Surat RT/RW | ❌ | ✅ | ❌ |
+| Proses Permohonan Surat | ❌ | ❌ | ✅ |
+| Buat Pengaduan Warga | ❌ | ✅ | ❌ |
+| Tindak Lanjut Pengaduan | ❌ | ❌ | ✅ |
+| Terima notif info/surat | ❌ | ✅ | ❌ |
 
 ### 1.5 Aturan Bisnis
 
 **Autentikasi**
 1. Satu user hanya punya satu account; username unik.
 2. Password disimpan sebagai hash.
-3. Role 1 login benar → token pengurus. Role 2 login benar → token warga.
+3. Role 1 login → token pengurus karta, Role 2 → token warga, Role 3 → token pengurus rt.
 4. Username/password salah → gagal, tanpa token. User nonaktif → ditolak.
 5. Menaikkan `token_version` membatalkan semua token lama.
 
@@ -76,24 +77,28 @@ Penjualan hasil panen/kas, iuran, registrasi mandiri warga, lupa password, kontr
 15. Saat kegiatan dipublikasikan, warga menerima notifikasi informasi.
 16. Notifikasi untuk warga tidak boleh berisi data teknis sensor atau peringatan internal.
 
-**Kesehatan lingkungan**
-17. Warga dan pengurus dapat membuat laporan (sampah, genangan/jentik, bau/limbah, lainnya).
-18. Status laporan: `baru` → `diproses` → `selesai`. Pelapor menerima notifikasi saat status berubah. Pengurus menerima notifikasi untuk laporan baru.
+**Layanan Administrasi Surat (RT/RW)**
+17. Warga dapat mengajukan permohonan surat (KTP, Domisili, dll).
+18. Status surat: `menunggu_review` → `diproses` → `siap_diambil` / `ditolak`.
+19. Pelapor dan pengurus RT menerima notifikasi saat ada permohonan baru atau perubahan status.
 
+**Pengaduan Warga Terpadu**
+20. Warga dapat membuat pengaduan (Keamanan, Lingkungan, Infrastruktur, Sosial).
+21. Status pengaduan: `baru` → `diproses` → `selesai`. Pelapor dan pengurus RT menerima notifikasi.
 ### 1.6 User Stories
 
 | ID | Sebagai | Saya ingin | Agar |
 |---|---|---|---|
-| US-01 | Pengurus/Warga | login dengan username dan password | masuk sesuai hak akses |
-| US-02 | Pengurus | melihat kondisi tiap kolam, bedeng, dan biopond | tahu kondisi terkini |
-| US-03 | Pengurus | menerima notifikasi saat sensor di luar batas | segera menangani masalah |
-| US-04 | Pengurus | mengatur batas aman tiap sensor | peringatan sesuai kebutuhan |
-| US-05 | Pengurus | mencatat pakan, panen, dan siklus | ada riwayat produksi |
-| US-06 | Pengurus | mengelola kegiatan Karta | warga tahu apa yang dikerjakan |
-| US-07 | Warga | melihat daftar kegiatan Karta | mengetahui program dan hasilnya |
-| US-08 | Warga | menerima notifikasi kegiatan dan pengumuman | tidak ketinggalan informasi |
-| US-09 | Warga/Pengurus | melapor masalah lingkungan | masalah cepat ditangani |
-| US-10 | Pengurus | menandai alert sudah ditangani | ada jejak penanganan |
+| US-01 | Semua | login dengan username dan password | masuk sesuai hak akses |
+| US-02 | P. Karta | melihat kondisi IoT budidaya | tahu kondisi terkini |
+| US-03 | P. Karta | menerima notif IoT dan mengatur batas | menangani masalah tepat waktu |
+| US-04 | P. Karta | mencatat siklus & kelola kegiatan | riwayat dan program tercatat |
+| US-05 | Warga | melihat daftar kegiatan | mengetahui program lingkungan |
+| US-06 | Warga | mengajukan permohonan surat | hemat waktu administrasi |
+| US-07 | P. RT | memproses surat permohonan warga | warga mendapat layanan |
+| US-08 | Warga | melapor pengaduan (keamanan/lingkungan) | masalah cepat ditangani |
+| US-09 | P. RT | menindaklanjuti pengaduan warga | lingkungan aman dan nyaman |
+| US-10 | P. Karta | menandai alert IoT sudah ditangani | ada jejak penanganan |
 
 ### 1.7 Kebutuhan Fungsional
 
@@ -104,16 +109,17 @@ Penjualan hasil panen/kas, iuran, registrasi mandiri warga, lupa password, kontr
 | FR-03 | CRUD perangkat IoT beserta API key | Wajib |
 | FR-04 | Endpoint penerima data sensor dari perangkat | Wajib |
 | FR-05 | Evaluasi data terhadap aturan, buat alert | Wajib |
-| FR-06 | Notifikasi in-app + push ke pengurus saat alert | Wajib |
+| FR-06 | Notifikasi in-app + push ke pengurus Karta saat alert IoT | Wajib |
 | FR-07 | Deteksi perangkat offline | Wajib |
 | FR-08 | Siklus dan log aktivitas budidaya | Wajib |
 | FR-09 | CRUD kegiatan Karta dengan draft/published | Wajib |
-| FR-10 | Feed kegiatan dan ringkasan unit untuk warga | Wajib |
-| FR-11 | Notifikasi informasi ke warga saat kegiatan dipublikasikan | Wajib |
-| FR-12 | Laporan kesehatan lingkungan beserta status | Wajib |
-| FR-13 | Daftar notifikasi, tandai dibaca, jumlah belum dibaca | Wajib |
-| FR-14 | Grafik riwayat sensor (jam/hari/minggu) | Disarankan |
-| FR-15 | Pengaturan preferensi notifikasi per user | Opsional |
+| FR-10 | Feed kegiatan dan ringkasan unit IoT untuk warga | Wajib |
+| FR-11 | Layanan Surat: CRUD master tipe surat & permohonan surat (oleh warga), approval (oleh RT) | Wajib |
+| FR-12 | Pengaduan Warga: Pembuatan pengaduan beserta status (Keamanan, Lingkungan, dll) | Wajib |
+| FR-13 | Notifikasi informasi kegiatan, status surat, dan status pengaduan | Wajib |
+| FR-14 | Daftar notifikasi, tandai dibaca, jumlah belum dibaca | Wajib |
+| FR-15 | Grafik riwayat sensor (jam/hari/minggu) | Disarankan |
+| FR-16 | Pengaturan preferensi notifikasi per user | Opsional |
 
 ### 1.8 Kebutuhan Non-Fungsional
 - HTTPS untuk semua komunikasi, termasuk perangkat IoT.
@@ -292,24 +298,48 @@ Contoh pemakaian: lele panen = `harvest` 120 kg; maggot = `waste_input` 50 kg la
 | created_by | BIGINT | FK users.id | |
 | created_at, updated_at | TIMESTAMP | | |
 
-### 2.5 Kesehatan Lingkungan
+### 2.5 Layanan Surat & Pengaduan Warga
 
-**environment_reports**
+**letter_types** (Master jenis surat)
+
+| Kolom | Tipe | Constraint | Keterangan |
+|---|---|---|---|
+| id | INT | PK | |
+| name | VARCHAR(100) | NOT NULL | misal "Pengantar KTP", "SKTM" |
+| description | VARCHAR(255) | NULL | |
+| is_active | TINYINT | NOT NULL, DEFAULT 1 | |
+
+**letter_requests** (Permohonan surat warga)
 
 | Kolom | Tipe | Constraint | Keterangan |
 |---|---|---|---|
 | id | BIGINT | PK | |
-| reporter_id | BIGINT | FK users.id, NOT NULL | |
-| category | VARCHAR(20) | NOT NULL | `sampah`, `genangan`, `jentik`, `limbah`, `lainnya` |
-| description | TEXT | NOT NULL | |
-| location | VARCHAR(150) | NOT NULL | |
-| photo_url | VARCHAR(255) | NULL | |
-| status | VARCHAR(15) | NOT NULL, DEFAULT 'baru' | `baru`, `diproses`, `selesai` |
-| handled_by | BIGINT | FK users.id, NULL | |
-| handler_note | VARCHAR(255) | NULL | |
+| user_id | BIGINT | FK users.id, NOT NULL | pemohon |
+| letter_type_id | INT | FK letter_types.id, NOT NULL | |
+| status | VARCHAR(20) | NOT NULL, DEFAULT 'menunggu_review' | `menunggu_review`, `diproses`, `siap_diambil`, `ditolak` |
+| notes | TEXT | NULL | keterangan pemohon / keperluan |
+| attachment_url | VARCHAR(255) | NULL | foto dokumen pendukung |
+| admin_note | VARCHAR(255) | NULL | catatan dari pengurus RT saat review |
+| processed_by | BIGINT | FK users.id, NULL | pengurus RT yang memproses |
 | created_at, updated_at | TIMESTAMP | | |
 
-Pemantauan otomatis kualitas lingkungan (misal gas amonia, suhu, kelembapan) memakai unit bertipe `lingkungan` dengan perangkat dan sensor seperti unit lainnya.
+**citizen_complaints** (Pengaduan warga - perluasan laporan lingkungan)
+
+| Kolom | Tipe | Constraint | Keterangan |
+|---|---|---|---|
+| id | BIGINT | PK | |
+| reporter_id | BIGINT | FK users.id, NOT NULL | pelapor |
+| category | VARCHAR(30) | NOT NULL | `keamanan`, `lingkungan`, `infrastruktur`, `sosial`, `lainnya` |
+| description | TEXT | NOT NULL | isi aduan |
+| location | VARCHAR(150) | NOT NULL | lokasi kejadian |
+| photo_url | VARCHAR(255) | NULL | foto bukti |
+| status | VARCHAR(15) | NOT NULL, DEFAULT 'baru' | `baru`, `diproses`, `selesai` |
+| handled_by | BIGINT | FK users.id, NULL | pengurus RT yang menangani |
+| handler_note | VARCHAR(255) | NULL | catatan penyelesaian |
+| created_at, updated_at | TIMESTAMP | | |
+
+Pemantauan otomatis kualitas lingkungan (misal gas amonia, suhu, kelembapan) tetap memakai unit bertipe `lingkungan` dengan perangkat dan sensor.
+
 
 ### 2.6 Notifikasi
 
@@ -345,12 +375,12 @@ Pemantauan otomatis kualitas lingkungan (misal gas amonia, suhu, kelembapan) mem
 CREATE TABLE users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
-  role TINYINT NOT NULL DEFAULT 2 COMMENT '1=pengurus, 2=warga',
+  role TINYINT NOT NULL DEFAULT 2 COMMENT '1=P.Karta, 2=Warga, 3=P.RT',
   token_version INT NOT NULL DEFAULT 0,
   status TINYINT NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT chk_role CHECK (role IN (1, 2))
+  CONSTRAINT chk_role CHECK (role IN (1, 2, 3))
 );
 
 CREATE TABLE accounts (
@@ -484,10 +514,33 @@ CREATE TABLE activities (
   FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
-CREATE TABLE environment_reports (
+CREATE TABLE letter_types (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL,
+  description VARCHAR(255) NULL,
+  is_active TINYINT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE letter_requests (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  letter_type_id INT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'menunggu_review',
+  notes TEXT NULL,
+  attachment_url VARCHAR(255) NULL,
+  admin_note VARCHAR(255) NULL,
+  processed_by BIGINT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (letter_type_id) REFERENCES letter_types(id),
+  FOREIGN KEY (processed_by) REFERENCES users(id)
+);
+
+CREATE TABLE citizen_complaints (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   reporter_id BIGINT NOT NULL,
-  category VARCHAR(20) NOT NULL,
+  category VARCHAR(30) NOT NULL,
   description TEXT NOT NULL,
   location VARCHAR(150) NOT NULL,
   photo_url VARCHAR(255) NULL,
@@ -564,7 +617,9 @@ erDiagram
     USERS ||--o{ PUSH_TOKENS : "punya"
     USERS ||--o{ NOTIFICATIONS : "menerima"
     USERS ||--o{ ACTIVITIES : "membuat"
-    USERS ||--o{ ENVIRONMENT_REPORTS : "melapor"
+    USERS ||--o{ CITIZEN_COMPLAINTS : "melapor"
+    USERS ||--o{ LETTER_REQUESTS : "mengajukan"
+    LETTER_TYPES ||--o{ LETTER_REQUESTS : "jenis"
     USERS ||--o{ PRODUCTION_CYCLES : "membuat"
     USERS ||--o{ CYCLE_LOGS : "mencatat"
     USERS ||--o{ ALERTS : "acknowledge"
@@ -663,7 +718,17 @@ erDiagram
         varchar status
         timestamp published_at
     }
-    ENVIRONMENT_REPORTS {
+    LETTER_TYPES {
+        int id PK
+        varchar name
+    }
+    LETTER_REQUESTS {
+        bigint id PK
+        bigint user_id FK
+        int letter_type_id FK
+        varchar status
+    }
+    CITIZEN_COMPLAINTS {
         bigint id PK
         bigint reporter_id FK
         varchar category
@@ -701,8 +766,10 @@ flowchart TD
     D -- Ya --> F{users.status aktif?}
     F -- Tidak --> E403[403 status false, tanpa token]
     F -- Ya --> G{users.role == 1?}
-    G -- Ya --> H[200 true, token pengurus]
-    G -- Tidak --> I[200 true, token warga]
+    G -- Ya --> H[200 true, token pengurus karta]
+    G -- Tidak --> G2{users.role == 3?}
+    G2 -- Ya --> H2[200 true, token pengurus rt]
+    G2 -- Tidak --> I[200 true, token warga]
 ```
 
 ### 4.2 Data Sensor sampai Notifikasi Pengurus
@@ -735,15 +802,29 @@ flowchart TD
     C --> F[Kegiatan muncul di feed warga]
 ```
 
-### 4.4 Laporan Lingkungan
+### 4.4 Pengaduan Warga
 
 ```mermaid
 flowchart LR
-    A[Warga/Pengurus buat laporan] --> B[Notifikasi ke pengurus]
-    B --> C[Pengurus ubah status: diproses]
+    A[Warga buat pengaduan] --> B[Notifikasi ke pengurus RT]
+    B --> C[Pengurus RT ubah status: diproses]
     C --> D[Notifikasi ke pelapor]
-    D --> E[Pengurus ubah status: selesai]
+    D --> E[Pengurus RT ubah status: selesai]
     E --> F[Notifikasi ke pelapor]
+```
+
+### 4.5 Layanan Administrasi Surat
+
+```mermaid
+flowchart TD
+    A[Warga ajukan permohonan surat] --> B[Notifikasi ke pengurus RT]
+    B --> C[Pengurus RT cek dokumen]
+    C --> D{Dokumen valid?}
+    D -- Tidak --> E[Tolak permohonan, notifikasi ke warga]
+    D -- Ya --> F[Status diproses, notifikasi ke warga]
+    F --> G[Surat dicetak / ditandatangani]
+    G --> H[Status siap_diambil, notifikasi ke warga]
+    H --> I[Warga mengambil surat fisik]
 ```
 
 ---
@@ -767,17 +848,18 @@ Semua respons memakai format:
 { "username": "budi", "password": "rahasia123" }
 ```
 
-**Berhasil (pengurus)**
+**Berhasil (P. Karta)**
 ```json
 {
   "status_code": 200,
   "status": true,
   "message": "Login berhasil",
-  "data": { "token": "eyJhbGciOi...", "role": "pengurus", "user": { "id": 1, "name": "Budi" } }
+  "data": { "token": "eyJhbGciOi...", "role": "pengurus_karta", "user": { "id": 1, "name": "Budi" } }
 }
 ```
 
-**Berhasil (warga)** sama, dengan `"role": "warga"`.
+**Berhasil (Warga)** sama, dengan `"role": "warga"`.
+**Berhasil (P. RT)** sama, dengan `"role": "pengurus_rt"`.
 
 **Gagal**
 ```json
@@ -808,7 +890,7 @@ Semua respons memakai format:
 }
 ```
 
-### 5.3 Pengurus (token pengurus)
+### 5.3 Pengurus Karta (token pengurus_karta)
 
 | Method | Endpoint | Keterangan |
 |---|---|---|
@@ -824,20 +906,31 @@ Semua respons memakai format:
 | POST | `/api/cycles/{id}/logs` | Catat aktivitas/panen |
 | GET/POST/PUT/DELETE | `/api/activities` | Kelola kegiatan Karta |
 | PATCH | `/api/activities/{id}/publish` | Publikasikan kegiatan |
-| GET | `/api/environment-reports` | Semua laporan |
-| PATCH | `/api/environment-reports/{id}/status` | Ubah status laporan |
 
-### 5.4 Warga (token warga)
+### 5.4 Pengurus RT (token pengurus_rt)
+
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | `/api/complaints` | Semua pengaduan warga |
+| PATCH | `/api/complaints/{id}/status` | Ubah status pengaduan |
+| GET/POST/PUT | `/api/letter-types` | Master jenis surat |
+| GET | `/api/letter-requests` | Daftar permohonan surat warga |
+| PATCH | `/api/letter-requests/{id}/status` | Update status surat (misal siap diambil) |
+
+### 5.5 Warga (token warga)
 
 | Method | Endpoint | Keterangan |
 |---|---|---|
 | GET | `/api/public/activities` | Feed kegiatan Karta (published saja) |
 | GET | `/api/public/activities/{id}` | Detail kegiatan |
-| GET | `/api/public/units` | Ringkasan unit: nama, jenis, status, hasil panen terakhir (tanpa data sensor teknis) |
-| POST | `/api/environment-reports` | Buat laporan lingkungan |
-| GET | `/api/environment-reports/mine` | Laporan milik sendiri |
+| GET | `/api/public/units` | Ringkasan unit: nama, jenis, status, hasil panen terakhir |
+| POST | `/api/complaints` | Buat pengaduan warga |
+| GET | `/api/complaints/mine` | Pengaduan milik sendiri |
+| GET | `/api/letter-types` | Lihat jenis surat yang bisa diajukan |
+| POST | `/api/letter-requests` | Ajukan permohonan surat |
+| GET | `/api/letter-requests/mine` | Lihat status surat yang diajukan |
 
-### 5.5 Umum (pengurus dan warga)
+### 5.6 Umum (semua token)
 
 | Method | Endpoint | Keterangan |
 |---|---|---|
@@ -847,12 +940,12 @@ Semua respons memakai format:
 | PATCH | `/api/notifications/read-all` | Tandai semua dibaca |
 | POST | `/api/push-tokens` | Daftarkan token push perangkat |
 
-### 5.6 Payload Token (JWT)
+### 5.7 Payload Token (JWT)
 
 | Klaim | Isi |
 |---|---|
 | sub | `users.id` |
-| role | `pengurus` atau `warga` |
+| role | `pengurus_karta`, `warga`, atau `pengurus_rt` |
 | token_version | `users.token_version` saat login |
 | exp | Waktu kedaluwarsa (misal 1 hari) |
 
@@ -860,25 +953,23 @@ Semua respons memakai format:
 
 ## 6. Contoh Teks Notifikasi
 
-**Ke pengurus (alert)**
-- Judul: "Peringatan: pH Kolam Lele A rendah"
-- Isi: "pH terukur 5.9, batas aman 6.5 – 8.5. Segera dicek."
+**(Untuk Pengurus Karta/IoT dan Kegiatan tetap sama, hanya penerima menjadi P. Karta)**
 
-**Ke pengurus (offline)**
-- Judul: "Perangkat offline"
-- Isi: "LELE-A-01 tidak mengirim data sejak 08:15."
+**Ke pengurus RT (pengaduan)**
+- Judul: "Pengaduan Warga Baru"
+- Isi: "Ada pengaduan keamanan di Pos Ronda, dilaporkan oleh Budi."
 
-**Ke pengurus (laporan)**
-- Judul: "Laporan lingkungan baru"
-- Isi: "Genangan air di Gang Mawar, dilaporkan oleh Siti."
+**Ke pengurus RT (permohonan surat)**
+- Judul: "Permohonan Surat Baru"
+- Isi: "Siti mengajukan Surat Pengantar KTP. Segera periksa."
 
-**Ke warga (kegiatan)**
-- Judul: "Kerja bakti & panen lele Sabtu ini"
-- Isi: "Karta mengadakan panen lele, Sabtu 08.00 di lokasi kolam. Warga boleh ikut."
+**Ke warga (status surat)**
+- Judul: "Surat Selesai"
+- Isi: "Surat Pengantar KTP Anda sudah dicetak dan siap diambil di rumah RT."
 
-**Ke pelapor**
-- Judul: "Laporan kamu sedang diproses"
-- Isi: "Laporan genangan di Gang Mawar sedang ditangani pengurus."
+**Ke pelapor (status pengaduan)**
+- Judul: "Pengaduan sedang diproses"
+- Isi: "Pengaduan keamanan Anda sedang ditangani oleh petugas Satpam."
 
 ---
 
@@ -886,14 +977,13 @@ Semua respons memakai format:
 
 | Tahap | Isi |
 |---|---|
-| 1 | Auth: users, accounts, login, middleware role |
-| 2 | Master: units, devices, sensor_types, seeder |
-| 3 | Endpoint IoT, simpan data, alert rules, alerts |
-| 4 | Notifikasi in-app, lalu push (FCM) |
-| 5 | Siklus dan log budidaya |
-| 6 | Kegiatan Karta dan feed warga |
-| 7 | Laporan kesehatan lingkungan |
-| 8 | Grafik, retensi data sensor, penyempurnaan |
+| 1 | Auth: users (3 role), accounts, login, middleware role |
+| 2 | Master IoT: units, devices, sensor_types |
+| 3 | Endpoint IoT, alert rules, notif P. Karta |
+| 4 | Siklus & log budidaya, Kegiatan Karta |
+| 5 | Pengaduan Warga & Layanan Surat RT/RW |
+| 6 | Notifikasi Push FCM untuk semua modul |
+| 7 | Testing Terpadu, Grafik, dan Penyempurnaan |
 
 ## 8. Hal yang Perlu Dikonfirmasi
 

@@ -22,14 +22,18 @@ class RoleMiddleware
             ], 401);
         }
 
-        $userRoleName = (int) $user->role === User::ROLE_PENGURUS ? 'pengurus' : 'warga';
+        $userRoleName = $user->role_name;
         $userRoleId = (string) $user->role;
 
         // Check if user's role matches any allowed roles
         $hasAccess = false;
         foreach ($roles as $role) {
             $normalizedRole = strtolower(trim($role));
-            if ($normalizedRole === $userRoleName || $normalizedRole === $userRoleId) {
+            if (
+                $normalizedRole === $userRoleName ||
+                $normalizedRole === $userRoleId ||
+                ($normalizedRole === 'pengurus' && in_array($userRoleName, ['pengurus', 'pengurus_karta', 'pengurus_rt']))
+            ) {
                 $hasAccess = true;
                 break;
             }

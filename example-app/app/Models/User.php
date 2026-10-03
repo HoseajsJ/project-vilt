@@ -16,6 +16,8 @@ class User extends Authenticatable
 
     public const ROLE_WARGA = 2;
 
+    public const ROLE_PENGURUS_RT = 3;
+
     public const STATUS_INACTIVE = 0;
 
     public const STATUS_ACTIVE = 1;
@@ -68,6 +70,11 @@ class User extends Authenticatable
         return (int) $this->role === self::ROLE_WARGA;
     }
 
+    public function isPengurusRt(): bool
+    {
+        return (int) $this->role === self::ROLE_PENGURUS_RT;
+    }
+
     public function isActive(): bool
     {
         return (int) $this->status === self::STATUS_ACTIVE;
@@ -75,6 +82,10 @@ class User extends Authenticatable
 
     public function getRoleNameAttribute(): string
     {
-        return $this->isPengurus() ? 'pengurus' : 'warga';
+        return match ((int) $this->role) {
+            self::ROLE_PENGURUS => 'pengurus_karta',
+            self::ROLE_PENGURUS_RT => 'pengurus_rt',
+            default => 'warga',
+        };
     }
 }

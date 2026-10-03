@@ -30,7 +30,7 @@ class JwtService
     public function generateToken(User $user, int $ttlHours = 24): string
     {
         $now = time();
-        $roleName = (int) $user->role === User::ROLE_PENGURUS ? 'pengurus' : 'warga';
+        $roleName = $user->role_name;
 
         $payload = [
             'iss' => config('app.url', 'http://localhost:8000'),
