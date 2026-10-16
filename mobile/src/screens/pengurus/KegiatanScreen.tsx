@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   RefreshControl,
   ScrollView,
@@ -14,9 +15,13 @@ import {
 import { ActivityCard } from '../../components/ActivityCard';
 import { api } from '../../services/api';
 import { colors } from '../../theme/colors';
-import { Activity } from '../../types';
+import { Activity, AttendanceMember } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 export const KegiatanScreen: React.FC = () => {
+  const { role, user } = useAuth();
+  const isKarta = role === 'pengurus_karta' || role === 'ketua_karta';
+  const canManageMeetings = role === 'ketua_karta';
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,12 +32,22 @@ export const KegiatanScreen: React.FC = () => {
   const [category, setCategory] = useState<'budidaya' | 'lingkungan' | 'sosial' | 'rapat'>('lingkungan');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('19:00');
+  const [selectedMeeting, setSelectedMeeting] = useState<Activity | null>(null);
+  const [attendanceMembers, setAttendanceMembers] = useState<AttendanceMember[]>([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [savingAttendance, setSavingAttendance] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const validMeetingDate = /^\d{4}-\d{2}-\d{2}$/.test(meetingDate)
+    && !Number.isNaN(new Date(`${meetingDate}T00:00:00`).getTime())
+    && new Date(`${meetingDate}T00:00:00`).toISOString().slice(0, 10) === meetingDate;
 
   const loadData = async () => {
     try {
       const data = await api.getActivities();
-      setActivities(data);
+      setActivities(data.filter((item) => isKarta || item.category !== 'rapat'));
     } catch {
       // handled
     } finally {
@@ -43,7 +58,7 @@ export const KegiatanScreen: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isKarta]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -51,14 +66,44 @@ export const KegiatanScreen: React.FC = () => {
   };
 
   const handlePublish = async (id: number) => {
-    await api.publishActivity(id);
-    setActivities((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: 'published' } : a))
-    );
+    try {
+      await api.publishActivity(id);
+      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, status: 'published' } : a)));
+      Alert.alert('Berhasil', 'Kegiatan dipublikasikan dan notifikasi dikirim kepada penerima.');
+    } catch (error) {
+      Alert.alert('Gagal memublikasikan', error instanceof Error ? error.message : 'Periksa koneksi API.');
+    }
+  };
+
+  const openAttendance = async (meeting: Activity) => {
+    setSelectedMeeting(meeting);
+    setAttendanceLoading(true);
+    try {
+      setAttendanceMembers(await api.getKartaMeetingAttendance(meeting.id));
+    } catch {
+      Alert.alert('Gagal memuat absensi', 'Periksa koneksi dan coba lagi.');
+      setSelectedMeeting(null);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const saveAttendance = async (status: AttendanceMember['status']) => {
+    if (!selectedMeeting || !status || role !== 'pengurus_karta') return;
+    setSavingAttendance(true);
+    try {
+      await api.updateKartaAttendance(selectedMeeting.id, status);
+      setAttendanceMembers((prev) => prev.map((member) => member.id === user?.id ? { ...member, status } : member));
+    } catch {
+      Alert.alert('Gagal menyimpan', 'Status absensi belum tersimpan. Coba lagi.');
+    } finally {
+      setSavingAttendance(false);
+    }
   };
 
   const handleCreateActivity = async () => {
     if (!title.trim()) return;
+    if (category === 'rapat' && (!validMeetingDate || !/^([01]\d|2[0-3]):[0-5]\d$/.test(meetingTime))) return;
     setSaving(true);
     try {
       const created = await api.createActivity({
@@ -66,7 +111,9 @@ export const KegiatanScreen: React.FC = () => {
         category,
         location: location.trim() || 'Balai RW 05',
         description: description.trim(),
-        activity_date: new Date(Date.now() + 86400000 * 3).toISOString(),
+        activity_date: category === 'rapat'
+          ? new Date(`${meetingDate}T${meetingTime}:00`).toISOString()
+          : new Date(Date.now() + 86400000 * 3).toISOString(),
         status: 'draft',
       });
       setActivities([created, ...activities]);
@@ -74,6 +121,8 @@ export const KegiatanScreen: React.FC = () => {
       setTitle('');
       setLocation('');
       setDescription('');
+      setMeetingDate('');
+      setMeetingTime('19:00');
     } catch {
       // handled
     } finally {
@@ -98,39 +147,40 @@ export const KegiatanScreen: React.FC = () => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.titleSection}>
-          <Text style={styles.pageTitle}>Kegiatan Karang Taruna & RW</Text>
+          <Text style={styles.pageTitle}>{isKarta ? 'Agenda Karang Taruna' : 'Kegiatan RW'}</Text>
           <Text style={styles.pageSubtitle}>
-            Kelola agenda kerja bakti, sosialisasi budidaya, rapat koordinasi, dan publikasi ke feed warga.
+            {canManageMeetings ? 'Buat agenda dan jadwal rapat Karta.' : isKarta ? 'Lihat jadwal rapat dan isi absensi sebagai anggota Karta.' : 'Kelola agenda kegiatan lingkungan dan warga RW.'}
           </Text>
         </View>
 
         {/* Create Activity Banner Button */}
-        <TouchableOpacity style={styles.createBanner} onPress={() => setShowAddModal(true)}>
+        {(!isKarta || canManageMeetings) && <TouchableOpacity style={styles.createBanner} onPress={() => setShowAddModal(true)}>
           <View style={styles.createBannerIcon}>
             <Ionicons name="add" size={24} color="#FFF" />
           </View>
           <View style={styles.createBannerText}>
             <Text style={styles.createBannerTitle}>Buat Kegiatan Baru</Text>
             <Text style={styles.createBannerSub}>
-              Publikasikan info & kirim notifikasi otomatis ke seluruh warga RW
+              {isKarta ? 'Buat kegiatan atau jadwalkan rapat internal Karta' : 'Publikasikan informasi kegiatan untuk warga RW'}
             </Text>
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity>}
 
         {/* List */}
         <Text style={styles.listHeading}>Semua Agenda ({activities.length})</Text>
-        {activities.map((item) => (
+        {activities.map((item, index) => (
           <ActivityCard
-            key={item.id}
+            key={`${item.id}-${item.activity_date}-${index}`}
             activity={item}
-            isPengurus={true}
+            isPengurus={item.category === 'rapat' ? canManageMeetings : true}
             onPublish={handlePublish}
+            onManageAttendance={isKarta && item.category === 'rapat' ? openAttendance : undefined}
           />
         ))}
       </ScrollView>
 
       {/* Modal Add Activity */}
-      <Modal visible={showAddModal} animationType="slide" transparent>
+      <Modal visible={showAddModal} animationType="slide" transparent onRequestClose={() => setShowAddModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
@@ -156,7 +206,7 @@ export const KegiatanScreen: React.FC = () => {
                   { key: 'lingkungan', label: 'Lingkungan' },
                   { key: 'budidaya', label: 'Budidaya IoT' },
                   { key: 'sosial', label: 'Sosial & Warga' },
-                  { key: 'rapat', label: 'Rapat Organisasi' },
+                  ...(canManageMeetings ? [{ key: 'rapat', label: 'Rapat Karta' }] : []),
                 ].map((c) => (
                   <TouchableOpacity
                     key={c.key}
@@ -177,6 +227,16 @@ export const KegiatanScreen: React.FC = () => {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {category === 'rapat' && (
+                <>
+                  <Text style={styles.label}>Tanggal rapat (YYYY-MM-DD) *</Text>
+                  <TextInput style={styles.input} placeholder="2026-10-30" value={meetingDate} onChangeText={setMeetingDate} />
+                  <Text style={styles.label}>Waktu rapat (24 jam) *</Text>
+                  <TextInput style={styles.input} placeholder="19:00" value={meetingTime} onChangeText={setMeetingTime} />
+                  <Text style={styles.meetingHint}>Jadwal ini hanya terlihat oleh pengurus Karta.</Text>
+                </>
+              )}
 
               <Text style={styles.label}>Lokasi Pelaksanaan</Text>
               <TextInput
@@ -201,15 +261,61 @@ export const KegiatanScreen: React.FC = () => {
               <TouchableOpacity
                 style={[styles.submitBtn, saving && styles.submitBtnDisabled]}
                 onPress={handleCreateActivity}
-                disabled={saving || !title.trim()}
+                disabled={saving || !title.trim() || (category === 'rapat' && (!validMeetingDate || !/^([01]\d|2[0-3]):[0-5]\d$/.test(meetingTime)))}
               >
                 {saving ? (
                   <ActivityIndicator color="#FFF" />
                 ) : (
-                  <Text style={styles.submitBtnText}>Simpan sebagai Draft</Text>
+                  <Text style={styles.submitBtnText}>{category === 'rapat' ? 'Simpan Jadwal Rapat' : 'Simpan sebagai Draft'}</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!selectedMeeting} animationType="slide" transparent onRequestClose={() => setSelectedMeeting(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={styles.modalTitle}>Absensi Rapat</Text>
+                <Text style={styles.meetingModalSubtitle} numberOfLines={2}>{selectedMeeting?.title}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedMeeting(null)}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {attendanceLoading ? <ActivityIndicator color={colors.primary} /> : (
+              <ScrollView contentContainerStyle={styles.modalForm}>
+                {attendanceMembers.length === 0 ? <Text style={styles.meetingHint}>Belum ada anggota Karta aktif untuk dicatat.</Text> : null}
+                {attendanceMembers.map((member) => (
+                  <View key={member.id} style={styles.memberAttendanceCard}>
+                    <Text style={styles.memberName}>{member.name}</Text>
+                    {member.id === user?.id && role === 'pengurus_karta' ? (
+                      <View style={styles.attendanceOptions}>
+                        {([
+                          ['hadir', 'Hadir'],
+                          ['izin', 'Izin'],
+                          ['tidak_hadir', 'Absen'],
+                        ] as const).map(([status, label]) => (
+                          <TouchableOpacity
+                            key={status}
+                            disabled={savingAttendance}
+                            style={[styles.attendanceOption, member.status === status && styles.attendanceOptionActive]}
+                            onPress={() => saveAttendance(status)}
+                          >
+                            <Text style={[styles.attendanceOptionText, member.status === status && styles.attendanceOptionTextActive]}>{label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : <Text style={styles.currentAttendance}>Status: {member.status || 'belum mengisi'}</Text>}
+                  </View>
+                ))}
+                <Text style={styles.meetingHint}>Absensi diisi oleh masing-masing anggota Karta. Riwayat kehadiran akan digunakan di fitur analisis terpisah.</Text>
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -317,12 +423,22 @@ const styles = StyleSheet.create({
   modalForm: {
     paddingBottom: 20,
   },
+  meetingModalSubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
+  memberAttendanceCard: { padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 10, backgroundColor: colors.surface },
+  memberName: { color: colors.text, fontSize: 14, fontWeight: '800' },
+  currentAttendance: { color: colors.textMuted, fontSize: 12, marginTop: 8 },
+  attendanceOptions: { flexDirection: 'row', gap: 6, marginTop: 10 },
+  attendanceOption: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 8, backgroundColor: colors.surfaceSubtle },
+  attendanceOptionActive: { backgroundColor: colors.primary },
+  attendanceOptionText: { fontSize: 11, fontWeight: '700', color: colors.textMuted },
+  attendanceOptionTextActive: { color: '#FFF' },
   label: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 6,
   },
+  meetingHint: { color: colors.textMuted, fontSize: 12, marginTop: 6, marginBottom: 12 },
   input: {
     backgroundColor: colors.surfaceSubtle,
     borderRadius: 8,

@@ -26,6 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
       case 'pengurus':
       case 'pengurus_karta':
         return 'Pengurus Karta';
+      case 'ketua_karta':
+        return 'Ketua Karta';
       case 'pengurus_rt':
         return 'Pengurus RT 03';
       case 'warga':
@@ -41,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
         return '#0284C7'; // Blue
       case 'pengurus':
       case 'pengurus_karta':
+      case 'ketua_karta':
         return '#059669'; // Emerald
       default:
         return '#D97706'; // Amber

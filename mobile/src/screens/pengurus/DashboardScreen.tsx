@@ -6,39 +6,32 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { AlertBanner } from '../../components/AlertBanner';
-import { StatCard } from '../../components/StatCard';
-import { UnitCard } from '../../components/UnitCard';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { AlertItem, Unit } from '../../types';
 
-interface DashboardScreenProps {
-  onNavigateTab: (tabKey: string) => void;
-}
-
-export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigateTab }) => {
-  const { user, isRtOrPengurus } = useAuth();
+export const DashboardScreen: React.FC = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState<any>(null);
-  const [units, setUnits] = useState<Unit[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     try {
-      const [dashData, unitsData, alertsData] = await Promise.all([
+      const [dashData, alertsData, unitsData] = await Promise.all([
         api.getPengurusDashboard(),
-        api.getUnits(),
         api.getAlerts(),
+        api.getUnits(),
       ]);
       setStats(dashData?.stats || {});
-      setUnits(unitsData);
       setAlerts(alertsData);
+      setUnits(unitsData);
     } catch {
       // handled inside api service
     } finally {
@@ -70,6 +63,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigateTab 
     );
   };
 
+  const metrics = [
+    { label: 'Surat menunggu', value: Number(stats?.pending_letters ?? 0), color: colors.accent },
+    { label: 'Aduan baru', value: Number(stats?.pending_complaints ?? 0), color: colors.catMaggot },
+    { label: 'Peringatan IoT', value: Number(stats?.open_alerts_count ?? 0), color: colors.danger },
+  ];
+  const maxMetric = Math.max(1, ...metrics.map((metric) => metric.value));
+  const sensorReadings = units.flatMap((unit) =>
+    (unit.latest_readings || []).slice(0, 1).map((reading) => ({ unit, reading }))
+  );
+
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
@@ -92,91 +95,52 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigateTab 
         onResolve={handleResolveAlert}
       />
 
-      {/* Greeting Banner */}
+      {/* Greeting */}
       <View style={styles.banner}>
         <View style={styles.bannerContent}>
           <Text style={styles.bannerGreeting}>
-            Selamat datang, {user?.name ? user.name.split(' ')[0] : 'Pengurus'}! 👋
+            Ringkasan, {user?.name ? user.name.split(' ')[0] : 'Pengurus'}
           </Text>
           <Text style={styles.bannerSubtitle}>
-            Pantau operasional IoT budidaya & layanan warga lingkungan RW 05 hari ini.
+            Kondisi layanan warga dan unit IoT saat ini.
           </Text>
         </View>
         <Ionicons name="pulse" size={32} color={colors.primary} />
       </View>
 
-      {/* Stat Grid */}
-      <Text style={styles.sectionTitle}>Ringkasan Statistik</Text>
-      <View style={styles.statGrid}>
-        <StatCard
-          label="Unit Budidaya Aktif"
-          value={stats?.units_count ?? units.length}
-          icon="hardware-chip-outline"
-          color={colors.catLingkungan}
-          subtext="Lele, Hidro, Maggot"
-        />
-        <StatCard
-          label="Peringatan Terbuka"
-          value={stats?.open_alerts_count ?? 0}
-          icon="warning-outline"
-          color={stats?.open_alerts_count > 0 ? colors.danger : colors.success}
-          subtext={stats?.open_alerts_count > 0 ? 'Perlu tindakan' : 'Semua aman'}
-        />
-        <StatCard
-          label="Permohonan Surat"
-          value={stats?.pending_letters ?? 0}
-          icon="document-text-outline"
-          color={colors.accent}
-          subtext="Menunggu review RT"
-        />
-        <StatCard
-          label="Pengaduan Warga"
-          value={stats?.pending_complaints ?? 0}
-          icon="alert-circle-outline"
-          color={colors.catMaggot}
-          subtext="Perlu tindak lanjut"
-        />
+      <View style={styles.chartCard}>
+        <Text style={styles.cardTitle}>Layanan yang perlu ditindaklanjuti</Text>
+        {metrics.map((metric) => (
+          <View key={metric.label} style={styles.metricRow}>
+            <View style={styles.metricLabelRow}>
+              <Text style={styles.metricLabel}>{metric.label}</Text>
+              <Text style={styles.metricValue}>{metric.value}</Text>
+            </View>
+            <View style={styles.track}>
+              <View style={[styles.bar, { width: `${metric.value === 0 ? 0 : Math.max(8, (metric.value / maxMetric) * 100)}%`, backgroundColor: metric.color }]} />
+            </View>
+          </View>
+        ))}
       </View>
 
-      {/* Quick Action Buttons */}
-      <Text style={styles.sectionTitle}>Aksi Cepat Pengurus</Text>
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-          onPress={() => onNavigateTab('iot')}
-        >
-          <Ionicons name="leaf-outline" size={18} color="#FFF" />
-          <Text style={styles.actionBtnText}>Cek Sensor IoT</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: colors.accent }]}
-          onPress={() => onNavigateTab('services')}
-        >
-          <Ionicons name="shield-checkmark-outline" size={18} color="#FFF" />
-          <Text style={styles.actionBtnText}>Layanan & Aduan</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: '#7C3AED' }]}
-          onPress={() => onNavigateTab('kegiatan')}
-        >
-          <Ionicons name="add-circle-outline" size={18} color="#FFF" />
-          <Text style={styles.actionBtnText}>Buat Kegiatan</Text>
-        </TouchableOpacity>
+      <View style={styles.chartCard}>
+        <View style={styles.sensorHeading}>
+          <View>
+            <Text style={styles.cardTitle}>Ringkasan sensor IoT</Text>
+            <Text style={styles.sensorSub}>{units.filter((unit) => unit.status === 1).length} dari {units.length} unit aktif</Text>
+          </View>
+          <Ionicons name="pulse-outline" size={22} color={colors.primary} />
+        </View>
+        {sensorReadings.length > 0 ? sensorReadings.slice(0, 4).map(({ unit, reading }) => (
+          <View key={`${unit.id}-${reading.code}`} style={styles.sensorRow}>
+            <View style={styles.sensorDot} />
+            <Text style={styles.sensorName} numberOfLines={1}>{unit.name}</Text>
+            <Text style={styles.sensorReading}>{reading.value} {reading.unit}</Text>
+          </View>
+        )) : <Text style={styles.emptyText}>Belum ada data pembacaan sensor.</Text>}
+        <Text style={styles.insightNote}>Ringkasan berdasarkan data sensor terbaru. Analisis prediksi ML belum tersedia.</Text>
       </View>
 
-      {/* Unit Monitoring Section */}
-      <View style={styles.unitHeaderRow}>
-        <Text style={styles.sectionTitle}>Status Sensor & Unit IoT ({units.length})</Text>
-        <TouchableOpacity onPress={() => onNavigateTab('iot')}>
-          <Text style={styles.seeAllText}>Lihat Detail →</Text>
-        </TouchableOpacity>
-      </View>
-
-      {units.map((unit) => (
-        <UnitCard key={unit.id} unit={unit} showTechnicalSensors={true} />
-      ))}
     </ScrollView>
   );
 };
@@ -227,49 +191,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 17,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 10,
-    marginTop: 6,
-  },
-  statGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-  },
-  actionBtnText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  unitHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    marginTop: 6,
-  },
-  seeAllText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
+  chartCard: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 12 },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: colors.text },
+  metricRow: { marginTop: 15 },
+  metricLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 },
+  metricLabel: { fontSize: 12, color: colors.textMuted },
+  metricValue: { fontSize: 12, fontWeight: '800', color: colors.text },
+  track: { height: 8, borderRadius: 5, backgroundColor: colors.surfaceSubtle, overflow: 'hidden' },
+  bar: { height: '100%', borderRadius: 5 },
+  sensorHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sensorSub: { fontSize: 11, color: colors.textMuted, marginTop: 3 },
+  sensorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  sensorDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
+  sensorName: { flex: 1, fontSize: 12, color: colors.textMuted },
+  sensorReading: { fontSize: 12, fontWeight: '700', color: colors.text },
+  emptyText: { color: colors.textMuted, fontSize: 12, paddingVertical: 8 },
+  insightNote: { fontSize: 10, color: colors.textLight, lineHeight: 14, marginTop: 8 },
 });

@@ -8,12 +8,14 @@ interface ActivityCardProps {
   activity: Activity;
   isPengurus?: boolean;
   onPublish?: (id: number) => void;
+  onManageAttendance?: (activity: Activity) => void;
 }
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
   activity,
   isPengurus = false,
   onPublish,
+  onManageAttendance,
 }) => {
   const getCategoryMeta = () => {
     switch (activity.category) {
@@ -101,7 +103,14 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       {isPengurus && activity.status === 'draft' && onPublish && (
         <TouchableOpacity style={styles.publishBtn} onPress={() => onPublish(activity.id)}>
           <Ionicons name="megaphone-outline" size={15} color="#FFF" />
-          <Text style={styles.publishBtnText}>Publikasikan ke Warga</Text>
+          <Text style={styles.publishBtnText}>{activity.category === 'rapat' ? 'Kirim Undangan ke Karta' : 'Publikasikan ke Warga'}</Text>
+        </TouchableOpacity>
+      )}
+
+      {activity.category === 'rapat' && onManageAttendance && (
+        <TouchableOpacity style={styles.attendanceBtn} onPress={() => onManageAttendance(activity)}>
+          <Ionicons name="people-outline" size={15} color="#FFF" />
+          <Text style={styles.publishBtnText}>Absensi Anggota Karta</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -191,4 +200,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  attendanceBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#7C3AED', paddingVertical: 9, borderRadius: 8, marginTop: 10 },
 });

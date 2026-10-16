@@ -122,8 +122,8 @@ export const InfoBudidayaScreen: React.FC = () => {
               <Text style={styles.emptyText}>Belum ada agenda kegiatan baru.</Text>
             </View>
           ) : (
-            activities.map((act) => (
-              <ActivityCard key={act.id} activity={act} isPengurus={false} />
+            activities.map((act, index) => (
+              <ActivityCard key={`${act.id}-${act.activity_date}-${index}`} activity={act} isPengurus={false} />
             ))
           )}
         </View>

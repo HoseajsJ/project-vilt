@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { LetterRequest } from '../types';
+import { api } from '../services/api';
 
 interface LetterCardProps {
   letter: LetterRequest;
@@ -20,7 +21,21 @@ export const LetterCard: React.FC<LetterCardProps> = ({
   onUpdateStatus,
 }) => {
   const [showActionBox, setShowActionBox] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [adminNote, setAdminNote] = useState('');
+
+  const resolveAttachmentUrl = (url?: string) => {
+    if (!url) return null;
+    const base = api.getBaseUrl().replace(/\/api\/?$/, '');
+    if (url.startsWith('/')) return `${base}${url}`;
+    if (/^https?:\/\//i.test(url)) {
+      return url.replace(/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.1\.6)(:\d+)?/i, base);
+    }
+    return `${base}/${url.replace(/^\//, '')}`;
+  };
+
+  const attachmentUrl = resolveAttachmentUrl(letter.attachment_url);
+  const attachmentIsImage = !!attachmentUrl && /\.(jpe?g|png|webp)(\?.*)?$/i.test(attachmentUrl);
 
   const getStatusMeta = () => {
     switch (letter.status) {
@@ -40,6 +55,7 @@ export const LetterCard: React.FC<LetterCardProps> = ({
   const statusMeta = getStatusMeta();
 
   return (
+    <>
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.iconTitleRow}>
@@ -67,6 +83,11 @@ export const LetterCard: React.FC<LetterCardProps> = ({
           <Text style={styles.notesText}>{letter.notes}</Text>
         </View>
       ) : null}
+
+      <TouchableOpacity style={styles.detailButton} onPress={() => setShowDetails(true)}>
+        <Ionicons name="eye-outline" size={16} color={colors.accent} />
+        <Text style={styles.detailButtonText}>Lihat Detail</Text>
+      </TouchableOpacity>
 
       {/* Admin Note / Pengambilan */}
       {letter.admin_note ? (
@@ -164,8 +185,51 @@ export const LetterCard: React.FC<LetterCardProps> = ({
         </View>
       )}
     </View>
+    <Modal visible={showDetails} animationType="slide" transparent onRequestClose={() => setShowDetails(false)}>
+      <View style={styles.detailOverlay}>
+        <View style={styles.detailModal}>
+          <View style={styles.detailHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailTitle}>Detail Permohonan Surat</Text>
+              <Text style={styles.detailSubtitle}>{letter.letter_type?.name || 'Surat Pengantar RT/RW'}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowDetails(false)} accessibilityLabel="Tutup detail">
+              <Ionicons name="close" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.detailContent}>
+            <DetailRow label="Pemohon" value={letter.user?.name || `ID warga ${letter.user_id}`} />
+            <DetailRow label="Status" value={statusMeta.label} />
+            <DetailRow label="Tanggal pengajuan" value={new Date(letter.created_at).toLocaleString('id-ID')} />
+            <DetailRow label="Keperluan" value={letter.notes || 'Tidak ada keterangan'} />
+            <DetailRow label="Catatan pengurus" value={letter.admin_note || 'Belum ada catatan'} />
+            {attachmentUrl ? (
+              <View style={styles.attachmentSection}>
+                <Text style={styles.detailLabel}>Lampiran</Text>
+                {attachmentIsImage ? <Image source={{ uri: attachmentUrl }} style={styles.detailImage} resizeMode="contain" /> : null}
+                <TouchableOpacity
+                  style={styles.attachmentButton}
+                  onPress={() => Linking.openURL(attachmentUrl).catch(() => Alert.alert('Lampiran tidak dapat dibuka', 'Periksa alamat file dan koneksi server.'))}
+                >
+                  <Ionicons name="open-outline" size={16} color={colors.accent} />
+                  <Text style={styles.attachmentButtonText}>{attachmentIsImage ? 'Buka lampiran' : 'Buka / unduh lampiran'}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : <DetailRow label="Lampiran" value="Tidak ada lampiran" />}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 };
+
+const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <View style={styles.detailRow}>
+    <Text style={styles.detailLabel}>{label}</Text>
+    <Text style={styles.detailValue}>{value}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   card: {
@@ -311,4 +375,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  detailButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: colors.accent, borderRadius: 8, paddingVertical: 9, marginTop: 4 },
+  detailButtonText: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  detailOverlay: { flex: 1, justifyContent: 'center', padding: 18, backgroundColor: 'rgba(15,23,42,0.55)' },
+  detailModal: { maxHeight: '85%', backgroundColor: colors.surface, borderRadius: 16, padding: 16 },
+  detailHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  detailTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  detailSubtitle: { color: colors.textMuted, fontSize: 13, marginTop: 3 },
+  detailContent: { paddingTop: 10, paddingBottom: 12 },
+  detailRow: { marginBottom: 12 },
+  detailLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', marginBottom: 3 },
+  detailValue: { color: colors.text, fontSize: 13, lineHeight: 19 },
+  attachmentSection: { marginTop: 2 },
+  detailImage: { width: '100%', height: 250, marginTop: 8, borderRadius: 10, backgroundColor: colors.surfaceSubtle },
+  attachmentButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10 },
+  attachmentButtonText: { color: colors.accent, fontSize: 12, fontWeight: '700' },
 });

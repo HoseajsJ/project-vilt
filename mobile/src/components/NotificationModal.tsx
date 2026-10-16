@@ -40,7 +40,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.header}>
@@ -67,7 +67,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
           <FlatList
             data={notifications}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => `${item.id}-${item.created_at}-${index}`}
             contentContainerStyle={styles.list}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>

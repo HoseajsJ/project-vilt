@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
+import { Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +23,7 @@ export const PengaduanScreen: React.FC = () => {
   const [category, setCategory] = useState<'keamanan' | 'lingkungan' | 'infrastruktur' | 'sosial'>('lingkungan');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [myComplaints, setMyComplaints] = useState<CitizenComplaint[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,16 @@ export const PengaduanScreen: React.FC = () => {
     loadData();
   };
 
+  const choosePhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+    if (!result.canceled) setPhoto(result.assets[0]);
+  };
+
   const handleSubmit = async () => {
     if (!description.trim() || !location.trim()) {
       Alert.alert('Perhatian', 'Mohon lengkapi lokasi dan isi pengaduan.');
@@ -59,17 +72,27 @@ export const PengaduanScreen: React.FC = () => {
         category,
         location: location.trim(),
         description: description.trim(),
+        photo: photo ? {
+          uri: photo.uri,
+          name: photo.fileName || `pengaduan-${Date.now()}.jpg`,
+          type: photo.mimeType || 'image/jpeg',
+          base64: photo.base64,
+        } : undefined,
       });
       setMyComplaints([created, ...myComplaints]);
       setLocation('');
       setDescription('');
+      setPhoto(null);
       setActiveTab('history');
       Alert.alert(
         'Laporan Terkirim',
         'Pengaduan Anda telah tercatat dan dinotifikasikan ke Pengurus RT & tim lingkungan untuk ditindaklanjuti.'
       );
-    } catch {
-      Alert.alert('Gagal', 'Terjadi kendala saat mengirim pengaduan.');
+    } catch (error) {
+      const message = error instanceof Error && error.message.includes('Network request failed')
+        ? `Tidak dapat terhubung ke server (${api.getBaseUrl()}). Pastikan backend aktif dan alamat server bisa diakses dari ponsel.`
+        : error instanceof Error ? error.message : 'Terjadi kendala saat mengirim pengaduan.';
+      Alert.alert('Gagal mengirim pengaduan', message);
     } finally {
       setSubmitting(false);
     }
@@ -197,6 +220,21 @@ export const PengaduanScreen: React.FC = () => {
             multiline
             numberOfLines={4}
           />
+
+          <Text style={[styles.sectionHeading, { marginTop: 14 }]}>Foto Pendukung (opsional)</Text>
+          <View style={styles.photoActions}>
+            <TouchableOpacity style={styles.photoButton} onPress={choosePhoto}>
+              <Ionicons name="camera-outline" size={18} color={colors.primary} />
+              <Text style={styles.photoButtonText}>{photo ? 'Ganti foto' : 'Pilih foto keluhan'}</Text>
+            </TouchableOpacity>
+            {photo ? (
+              <TouchableOpacity style={styles.photoRemoveButton} onPress={() => setPhoto(null)}>
+                <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                <Text style={styles.photoRemoveText}>Hapus</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {photo && <Image source={{ uri: photo.uri }} style={styles.photoPreview} />}
 
           <View style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={18} color={colors.catMaggot} />
@@ -364,6 +402,12 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  photoActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  photoButton: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  photoButtonText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  photoRemoveButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' },
+  photoRemoveText: { color: colors.danger, fontWeight: '700', fontSize: 13 },
+  photoPreview: { width: '100%', height: 180, borderRadius: 10, marginTop: 10 },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',

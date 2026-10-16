@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toByteArray } from 'base64-js';
 import {
   Activity,
+  AttendanceMember,
   AlertItem,
   AppNotification,
   AuthResponse,
@@ -15,17 +17,24 @@ import {
   mockComplaints,
   mockLetterRequests,
   mockLetterTypes,
-  mockNotifications,
   mockUnits,
 } from './mockData';
 
 const STORAGE_KEY_TOKEN = '@desa_pintar_jwt';
 const STORAGE_KEY_BASE_URL = '@desa_pintar_base_url';
 
-// Default to LAN IP 192.168.1.6 or fallback to localhost
-export const DEFAULT_BASE_URL = 'http://192.168.1.6:8000/api';
+// Default to LAN IP 192.168.1.27 or fallback to localhost
+export const DEFAULT_BASE_URL = 'http://192.168.1.27:8000/api';
 
 let mockIdCounter = Date.now();
+const isApiNetworkError = (error: unknown) => !(error instanceof ApiRequestError) || error.status >= 500;
+
+export class ApiRequestError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+  }
+}
 
 class ApiService {
   private baseUrl: string = DEFAULT_BASE_URL;
@@ -35,7 +44,12 @@ class ApiService {
     try {
       const storedUrl = await AsyncStorage.getItem(STORAGE_KEY_BASE_URL);
       if (storedUrl) {
-        this.baseUrl = storedUrl;
+        if (storedUrl.includes('192.168.1.6')) {
+          this.baseUrl = DEFAULT_BASE_URL;
+          await AsyncStorage.setItem(STORAGE_KEY_BASE_URL, DEFAULT_BASE_URL);
+        } else {
+          this.baseUrl = storedUrl;
+        }
       }
       const storedToken = await AsyncStorage.getItem(STORAGE_KEY_TOKEN);
       if (storedToken) {
@@ -74,8 +88,9 @@ class ApiService {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    const isMultipart = typeof FormData !== 'undefined' && options.body instanceof FormData;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
       Accept: 'application/json',
       ...(options.headers as Record<string, string>),
     };
@@ -95,7 +110,22 @@ class ApiService {
       });
       clearTimeout(timeoutId);
 
-      const json = await response.json();
+      let json: any;
+      try {
+        json = await response.json();
+      } catch {
+        json = null;
+      }
+      if (!response.ok || json?.status === false) {
+        const firstValidationError = json?.data && typeof json.data === 'object'
+          ? Object.values(json.data).flat().find((value) => typeof value === 'string')
+          : null;
+        throw new ApiRequestError(
+          String(firstValidationError || json?.message || `Server mengembalikan HTTP ${response.status}`),
+          response.status
+        );
+      }
+      if (!json) throw new Error('Respons server tidak dapat dibaca. Periksa log backend Laravel.');
       return json;
     } catch (err) {
       clearTimeout(timeoutId);
@@ -251,14 +281,20 @@ class ApiService {
   }
 
   async publishActivity(id: number): Promise<boolean> {
-    try {
-      await this.request<any>(`/activities/${id}/publish`, { method: 'PATCH' });
-      return true;
-    } catch {
-      const found = mockActivities.find((a) => a.id === id);
-      if (found) found.status = 'published';
-      return true;
-    }
+    await this.request<any>(`/activities/${id}/publish`, { method: 'PATCH' });
+    return true;
+  }
+
+  async getKartaMeetingAttendance(activityId: number): Promise<AttendanceMember[]> {
+    const res = await this.request<any>(`/karta/meetings/${activityId}/attendance`);
+    return res.data?.members || [];
+  }
+
+  async updateKartaAttendance(activityId: number, status: AttendanceMember['status']): Promise<void> {
+    await this.request<any>(`/karta/meetings/${activityId}/attendance`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
   }
 
   // Letters
@@ -352,14 +388,48 @@ class ApiService {
     category: string;
     description: string;
     location: string;
+    photo?: { uri: string; name: string; type: string; base64?: string | null };
   }): Promise<CitizenComplaint> {
     try {
+      if (!complaint.photo) {
+        const res = await this.request<any>('/complaints', {
+          method: 'POST',
+          body: JSON.stringify({
+            category: complaint.category,
+            description: complaint.description,
+            location: complaint.location,
+          }),
+        });
+        return res.data;
+      }
+
+      const body = new FormData();
+      body.append('category', complaint.category);
+      body.append('description', complaint.description);
+      body.append('location', complaint.location);
+
+      let bytes: Uint8Array;
+      if (complaint.photo.base64) {
+        bytes = toByteArray(complaint.photo.base64);
+      } else {
+        bytes = await this.uriToBytes(complaint.photo.uri);
+      }
+
+      // Expo SDK 57 WinterCG fetch requires an object implementing .bytes() or standard Blob
+      body.append('photo', {
+        name: complaint.photo.name,
+        type: complaint.photo.type,
+        uri: complaint.photo.uri,
+        bytes: () => bytes,
+      } as any);
+
       const res = await this.request<any>('/complaints', {
         method: 'POST',
-        body: JSON.stringify(complaint),
+        body,
       });
       return res.data;
-    } catch {
+    } catch (error) {
+      if (complaint.photo || error instanceof ApiRequestError) throw error;
       const newC: CitizenComplaint = {
         id: mockIdCounter++,
         reporter_id: 2,
@@ -371,6 +441,34 @@ class ApiService {
       };
       mockComplaints.unshift(newC);
       return newC;
+    }
+  }
+
+  private async uriToBytes(uri: string): Promise<Uint8Array> {
+    try {
+      const res = await fetch(uri);
+      const buffer = await res.arrayBuffer();
+      return new Uint8Array(buffer);
+    } catch {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (reader.result instanceof ArrayBuffer) {
+              resolve(new Uint8Array(reader.result));
+            } else {
+              reject(new Error('Gagal membaca data file foto'));
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(xhr.response);
+        };
+        xhr.onerror = reject;
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        xhr.send(null);
+      });
     }
   }
 
@@ -393,42 +491,23 @@ class ApiService {
 
   // Notifications
   async getNotifications(): Promise<AppNotification[]> {
-    try {
-      const res = await this.request<any>('/notifications');
-      return res.data || [];
-    } catch {
-      return mockNotifications;
-    }
+    const res = await this.request<any>('/notifications');
+    return res.data || [];
   }
 
   async getUnreadCount(): Promise<number> {
-    try {
-      const res = await this.request<any>('/notifications/unread-count');
-      return res.data?.unread_count ?? 0;
-    } catch {
-      return mockNotifications.filter((n) => !n.is_read).length;
-    }
+    const res = await this.request<any>('/notifications/unread-count');
+    return res.data?.unread_count ?? 0;
   }
 
   async markNotificationRead(id: number): Promise<boolean> {
-    try {
-      await this.request<any>(`/notifications/${id}/read`, { method: 'PATCH' });
-      return true;
-    } catch {
-      const found = mockNotifications.find((n) => n.id === id);
-      if (found) found.is_read = true;
-      return true;
-    }
+    await this.request<any>(`/notifications/${id}/read`, { method: 'PATCH' });
+    return true;
   }
 
   async markAllNotificationsRead(): Promise<boolean> {
-    try {
-      await this.request<any>('/notifications/read-all', { method: 'PATCH' });
-      return true;
-    } catch {
-      mockNotifications.forEach((n) => (n.is_read = true));
-      return true;
-    }
+    await this.request<any>('/notifications/read-all', { method: 'PATCH' });
+    return true;
   }
 }
 

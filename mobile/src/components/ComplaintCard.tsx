@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { CitizenComplaint } from '../types';
+import { api } from '../services/api';
 
 interface ComplaintCardProps {
   complaint: CitizenComplaint;
@@ -16,6 +17,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({
   onUpdateStatus,
 }) => {
   const [showActionBox, setShowActionBox] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [handlerNote, setHandlerNote] = useState('');
 
   const getStatusMeta = () => {
@@ -49,7 +51,19 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({
   const statusMeta = getStatusMeta();
   const catMeta = getCategoryMeta();
 
+  const resolvePhotoUrl = (url?: string | null) => {
+    if (!url) return null;
+    const base = api.getBaseUrl().replace(/\/api\/?$/, '');
+    if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('192.168.1.6')) {
+      return url.replace(/^https?:\/\/[^/]+/, base);
+    }
+    return url;
+  };
+
+  const resolvedPhoto = resolvePhotoUrl(complaint.photo_url);
+
   return (
+    <>
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.catRow}>
@@ -62,6 +76,12 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({
       </View>
 
       <Text style={styles.description}>{complaint.description}</Text>
+      {resolvedPhoto ? <Image source={{ uri: resolvedPhoto }} style={styles.photo} /> : null}
+
+      <TouchableOpacity style={styles.detailButton} onPress={() => setShowDetails(true)}>
+        <Ionicons name="eye-outline" size={16} color={colors.primary} />
+        <Text style={styles.detailButtonText}>Lihat Detail</Text>
+      </TouchableOpacity>
 
       <View style={styles.locationRow}>
         <Ionicons name="location-outline" size={13} color={colors.textLight} />
@@ -135,8 +155,44 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({
         </View>
       )}
     </View>
+    <Modal visible={showDetails} animationType="slide" transparent onRequestClose={() => setShowDetails(false)}>
+      <View style={styles.detailOverlay}>
+        <View style={styles.detailModal}>
+          <View style={styles.detailHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.detailTitle}>Detail Pengaduan</Text>
+              <Text style={styles.detailSubtitle}>{catMeta.label} · {statusMeta.label}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowDetails(false)} accessibilityLabel="Tutup detail">
+              <Ionicons name="close" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.detailContent}>
+            <DetailRow label="Pelapor" value={complaint.reporter?.name || `ID warga ${complaint.reporter_id}`} />
+            <DetailRow label="Lokasi kejadian" value={complaint.location} />
+            <DetailRow label="Tanggal laporan" value={new Date(complaint.created_at).toLocaleString('id-ID')} />
+            <DetailRow label="Uraian" value={complaint.description} />
+            <DetailRow label="Catatan tindak lanjut" value={complaint.handler_note || 'Belum ada tindak lanjut'} />
+            {resolvedPhoto ? (
+              <View>
+                <Text style={styles.detailLabel}>Foto bukti</Text>
+                <Image source={{ uri: resolvedPhoto }} style={styles.detailImage} resizeMode="contain" />
+              </View>
+            ) : <DetailRow label="Foto bukti" value="Tidak ada foto terlampir" />}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 };
+
+const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <View style={styles.detailRow}>
+    <Text style={styles.detailLabel}>{label}</Text>
+    <Text style={styles.detailValue}>{value}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   card: {
@@ -183,6 +239,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 8,
   },
+  photo: { width: '100%', height: 190, borderRadius: 10, marginBottom: 10, backgroundColor: colors.surfaceSubtle },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -266,4 +323,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  detailButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, paddingVertical: 9, marginTop: 4 },
+  detailButtonText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  detailOverlay: { flex: 1, justifyContent: 'center', padding: 18, backgroundColor: 'rgba(15,23,42,0.55)' },
+  detailModal: { maxHeight: '85%', backgroundColor: colors.surface, borderRadius: 16, padding: 16 },
+  detailHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  detailTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  detailSubtitle: { color: colors.textMuted, fontSize: 13, marginTop: 3 },
+  detailContent: { paddingTop: 10, paddingBottom: 12 },
+  detailRow: { marginBottom: 12 },
+  detailLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', marginBottom: 3 },
+  detailValue: { color: colors.text, fontSize: 13, lineHeight: 19 },
+  detailImage: { width: '100%', height: 260, marginTop: 8, borderRadius: 10, backgroundColor: colors.surfaceSubtle },
 });

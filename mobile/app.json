@@ -10,6 +10,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#059669"
     },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Izinkan my23 mengakses foto untuk melampirkan bukti pengaduan."
+        }
+      ]
+    ],
     "userInterfaceStyle": "light",
     "primaryColor": "#059669",
     "ios": {

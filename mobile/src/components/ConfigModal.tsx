@@ -18,11 +18,11 @@ interface ConfigModalProps {
 }
 
 export const ConfigModal: React.FC<ConfigModalProps> = ({ visible, onClose }) => {
-  const { backendUrl, updateBackendUrl, switchDemoRole, logout, user } = useAuth();
+  const { backendUrl, updateBackendUrl, logout, user } = useAuth();
   const [urlInput, setUrlInput] = useState(backendUrl);
 
   const presets = [
-    { label: 'LAN IP (192.168.1.6)', url: 'http://192.168.1.6:8000/api' },
+    { label: 'LAN IP (192.168.1.27)', url: 'http://192.168.1.27:8000/api' },
     { label: 'Android Emulator (10.0.2.2)', url: 'http://10.0.2.2:8000/api' },
     { label: 'Localhost Web (127.0.0.1)', url: 'http://127.0.0.1:8000/api' },
   ];
@@ -35,7 +35,7 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ visible, onClose }) =>
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.header}>
@@ -53,7 +53,7 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ visible, onClose }) =>
             style={styles.input}
             value={urlInput}
             onChangeText={setUrlInput}
-            placeholder="http://192.168.1.6:8000/api"
+            placeholder="http://192.168.1.27:8000/api"
             placeholderTextColor={colors.textLight}
             autoCapitalize="none"
             autoCorrect={false}
@@ -80,41 +80,6 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ visible, onClose }) =>
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
-
-          <View style={styles.roleSwitchSection}>
-            <Text style={styles.sectionTitle}>Beralih Akun Cepat (Testing):</Text>
-            <View style={styles.roleBtnRow}>
-              <TouchableOpacity
-                style={[styles.roleBtn, { backgroundColor: colors.catLingkungan }]}
-                onPress={() => {
-                  switchDemoRole('pengurus_karta');
-                  onClose();
-                }}
-              >
-                <Text style={styles.roleBtnText}>Budi (Karta)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.roleBtn, { backgroundColor: colors.accent }]}
-                onPress={() => {
-                  switchDemoRole('pengurus_rt');
-                  onClose();
-                }}
-              >
-                <Text style={styles.roleBtnText}>Pak RT (RT 03)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.roleBtn, { backgroundColor: colors.catMaggot }]}
-                onPress={() => {
-                  switchDemoRole('warga');
-                  onClose();
-                }}
-              >
-                <Text style={styles.roleBtnText}>Siti (Warga)</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           <View style={styles.actions}>
@@ -221,27 +186,6 @@ const styles = StyleSheet.create({
   },
   presetTextActive: {
     color: colors.primary,
-    fontWeight: '700',
-  },
-  roleSwitchSection: {
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingTop: 12,
-    marginBottom: 16,
-  },
-  roleBtnRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  roleBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  roleBtnText: {
-    color: '#FFF',
-    fontSize: 11,
     fontWeight: '700',
   },
   actions: {

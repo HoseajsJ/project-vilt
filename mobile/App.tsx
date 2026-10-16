@@ -1,16 +1,15 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import {
+  Alert,
   ActivityIndicator,
   Image,
-  Platform,
-  SafeAreaView,
-  StatusBar as RNStatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { ConfigModal } from './src/components/ConfigModal';
 import { Header } from './src/components/Header';
 import { NotificationModal } from './src/components/NotificationModal';
@@ -46,7 +45,7 @@ function MainApp() {
     }
   }, [role, isRtOrPengurus]);
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (showError = false) => {
     if (!user) return;
     try {
       const [list, count] = await Promise.all([
@@ -55,27 +54,50 @@ function MainApp() {
       ]);
       setNotifications(list);
       setUnreadCount(count);
-    } catch {
-      // handled
+    } catch (error) {
+      if (showError) {
+        Alert.alert('Notifikasi gagal dimuat', error instanceof Error ? error.message : 'Periksa koneksi API.');
+      }
     }
   };
 
   useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+
     loadNotifications();
+    const interval = setInterval(() => loadNotifications(), 20000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') loadNotifications();
+    });
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
   }, [user]);
 
   const handleMarkNotificationRead = async (id: number) => {
-    await api.markNotificationRead(id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+    const notification = notifications.find((item) => item.id === id);
+    try {
+      await api.markNotificationRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+      if (notification && !notification.is_read) setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (error) {
+      Alert.alert('Gagal memperbarui notifikasi', error instanceof Error ? error.message : 'Periksa koneksi API.');
+    }
   };
 
   const handleMarkAllRead = async () => {
-    await api.markAllNotificationsRead();
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      Alert.alert('Gagal memperbarui notifikasi', error instanceof Error ? error.message : 'Periksa koneksi API.');
+    }
   };
 
   if (isLoading) {
@@ -104,7 +126,7 @@ function MainApp() {
     { key: 'dashboard', label: 'Ringkasan', icon: 'speedometer' },
     { key: 'iot', label: 'IoT Budidaya', icon: 'leaf' },
     { key: 'services', label: 'Surat & Aduan', icon: 'shield-checkmark' },
-    { key: 'kegiatan', label: 'Kegiatan', icon: 'calendar' },
+    { key: 'kegiatan', label: role === 'pengurus_karta' || role === 'ketua_karta' ? 'Agenda Karta' : 'Kegiatan', icon: 'calendar' },
   ];
 
   // Warga Tabs
@@ -123,7 +145,7 @@ function MainApp() {
       <Header
         unreadCount={unreadCount}
         onOpenNotifications={() => {
-          loadNotifications();
+          loadNotifications(true);
           setShowNotifications(true);
         }}
         onOpenSettings={() => setShowConfig(true)}
@@ -132,7 +154,7 @@ function MainApp() {
       <View style={styles.screenContainer}>
         {isRtOrPengurus ? (
           <>
-            {activeTab === 'dashboard' && <DashboardScreen onNavigateTab={setActiveTab} />}
+            {activeTab === 'dashboard' && <DashboardScreen />}
             {activeTab === 'iot' && <IoTMonitoringScreen />}
             {activeTab === 'services' && <AdminServicesScreen />}
             {activeTab === 'kegiatan' && <KegiatanScreen />}
@@ -183,7 +205,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.surface,
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
+    paddingTop: 0,
   },
   screenContainer: {
     flex: 1,

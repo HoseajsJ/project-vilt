@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { api } from '../services/api';
+import { api, ApiRequestError } from '../services/api';
 import { RoleType, User } from '../types';
 
 interface AuthContextType {
@@ -10,7 +10,6 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
-  switchDemoRole: (role: RoleType) => void;
   backendUrl: string;
   updateBackendUrl: (url: string) => Promise<void>;
   isRtOrPengurus: boolean;
@@ -33,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const bootstrap = async () => {
+    const splashStartedAt = Date.now();
     try {
       await api.init();
       setBackendUrlState(api.getBaseUrl());
@@ -48,6 +48,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // fallback
     } finally {
+      const remainingSplashTime = 1200 - (Date.now() - splashStartedAt);
+      if (remainingSplashTime > 0) await new Promise((resolve) => setTimeout(resolve, remainingSplashTime));
       setIsLoading(false);
     }
   };
@@ -71,30 +73,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true, message: res.message || 'Login berhasil' };
       }
       return { success: false, message: res?.message || 'Login gagal' };
-    } catch {
-      // Offline fallback: check demo credentials
-      if (username.toLowerCase() === 'budi' || username.toLowerCase() === 'pengurus') {
-        const demoUser: User = { id: 1, name: 'Budi Santoso', role: 'pengurus_karta' };
-        setUser(demoUser);
-        setRole('pengurus_karta');
-        setToken('demo-token-pengurus');
-        return { success: true, message: 'Masuk mode demo (Pengurus Karang Taruna)' };
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        return { success: false, message: error.message };
       }
-      if (username.toLowerCase() === 'pakrt' || username.toLowerCase() === 'rt') {
-        const demoUser: User = { id: 3, name: 'H. Bambang Irawan (Ketua RT 03)', role: 'pengurus_rt' };
-        setUser(demoUser);
-        setRole('pengurus_rt');
-        setToken('demo-token-rt');
-        return { success: true, message: 'Masuk mode demo (Pengurus RT 03)' };
-      }
-      if (username.toLowerCase() === 'siti' || username.toLowerCase() === 'warga') {
-        const demoUser: User = { id: 2, name: 'Siti Aminah', role: 'warga' };
-        setUser(demoUser);
-        setRole('warga');
-        setToken('demo-token-warga');
-        return { success: true, message: 'Masuk mode demo (Warga RW 05)' };
-      }
-      return { success: false, message: 'Username atau password salah' };
+      return {
+        success: false,
+        message: `Tidak dapat terhubung ke server (${api.getBaseUrl()}). Periksa koneksi dan alamat API staging.`,
+      };
     } finally {
       setIsLoading(false);
     }
@@ -115,28 +101,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const switchDemoRole = (newRole: RoleType) => {
-    if (newRole === 'pengurus' || newRole === 'pengurus_karta') {
-      const u: User = { id: 1, name: 'Budi Santoso', role: 'pengurus_karta' };
-      setUser(u);
-      setRole('pengurus_karta');
-    } else if (newRole === 'pengurus_rt') {
-      const u: User = { id: 3, name: 'H. Bambang Irawan (Ketua RT 03)', role: 'pengurus_rt' };
-      setUser(u);
-      setRole('pengurus_rt');
-    } else {
-      const u: User = { id: 2, name: 'Siti Aminah', role: 'warga' };
-      setUser(u);
-      setRole('warga');
-    }
-  };
-
   const updateBackendUrl = async (url: string) => {
     await api.setBaseUrl(url);
     setBackendUrlState(api.getBaseUrl());
   };
 
-  const isRtOrPengurus = role === 'pengurus' || role === 'pengurus_karta' || role === 'pengurus_rt';
+  const isRtOrPengurus = role === 'pengurus' || role === 'pengurus_karta' || role === 'ketua_karta' || role === 'pengurus_rt';
   const isWarga = role === 'warga';
 
   return (
@@ -148,7 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         logout,
-        switchDemoRole,
         backendUrl,
         updateBackendUrl,
         isRtOrPengurus,

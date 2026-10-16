@@ -17,8 +17,8 @@ import { colors } from '../theme/colors';
 
 export const LoginScreen: React.FC = () => {
   const { login, isLoading, backendUrl } = useAuth();
-  const [username, setUsername] = useState('budi');
-  const [password, setPassword] = useState('password123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showConfig, setShowConfig] = useState(false);
@@ -34,12 +34,6 @@ export const LoginScreen: React.FC = () => {
     if (!res.success) {
       setErrorMessage(res.message);
     }
-  };
-
-  const handlePreset = (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
-    setErrorMessage('');
   };
 
   return (
@@ -135,50 +129,6 @@ export const LoginScreen: React.FC = () => {
             )}
           </TouchableOpacity>
 
-          {/* Quick Preset Buttons */}
-          <View style={styles.presetSection}>
-            <Text style={styles.presetHeading}>Pilih Akun Demo Cepat:</Text>
-            <View style={styles.presetButtons}>
-              <TouchableOpacity
-                style={[styles.presetCard, username === 'budi' && styles.presetCardActive]}
-                onPress={() => handlePreset('budi', 'password123')}
-              >
-                <View style={[styles.presetIconWrap, { backgroundColor: '#DCFCE7' }]}>
-                  <Ionicons name="leaf" size={16} color={colors.catLingkungan} />
-                </View>
-                <View style={styles.presetTextCol}>
-                  <Text style={styles.presetName}>Budi Santoso</Text>
-                  <Text style={styles.presetRole}>Pengurus Karang Taruna</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.presetCard, username === 'siti' && styles.presetCardActive]}
-                onPress={() => handlePreset('siti', 'password123')}
-              >
-                <View style={[styles.presetIconWrap, { backgroundColor: '#FEF3C7' }]}>
-                  <Ionicons name="person" size={16} color={colors.catMaggot} />
-                </View>
-                <View style={styles.presetTextCol}>
-                  <Text style={styles.presetName}>Siti Aminah</Text>
-                  <Text style={styles.presetRole}>Warga RW 05</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.presetCard, username === 'pakrt' && styles.presetCardActive]}
-                onPress={() => handlePreset('pakrt', 'password123')}
-              >
-                <View style={[styles.presetIconWrap, { backgroundColor: '#DBEAFE' }]}>
-                  <Ionicons name="shield-checkmark" size={16} color={colors.accent} />
-                </View>
-                <View style={styles.presetTextCol}>
-                  <Text style={styles.presetName}>Pak Bambang</Text>
-                  <Text style={styles.presetRole}>Ketua RT 03</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
 
         <Text style={styles.footerText}>
@@ -335,54 +285,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: '700',
-  },
-  presetSection: {
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingTop: 16,
-  },
-  presetHeading: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    marginBottom: 10,
-  },
-  presetButtons: {
-    gap: 8,
-  },
-  presetCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: colors.surfaceSubtle,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  presetCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryUltralight,
-  },
-  presetIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  presetTextCol: {
-    flex: 1,
-  },
-  presetName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  presetRole: {
-    fontSize: 11,
-    color: colors.textMuted,
   },
   footerText: {
     textAlign: 'center',

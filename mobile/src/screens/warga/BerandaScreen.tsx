@@ -176,8 +176,8 @@ export const BerandaScreen: React.FC<BerandaScreenProps> = ({ onNavigateTab }) =
           </TouchableOpacity>
         </View>
 
-        {activities.slice(0, 3).map((act) => (
-          <ActivityCard key={act.id} activity={act} isPengurus={false} />
+        {activities.slice(0, 3).map((act, index) => (
+          <ActivityCard key={`${act.id}-${act.activity_date}-${index}`} activity={act} isPengurus={false} />
         ))}
       </View>
     </ScrollView>

@@ -1,4 +1,4 @@
-export type RoleType = 'pengurus' | 'pengurus_karta' | 'pengurus_rt' | 'warga';
+export type RoleType = 'pengurus' | 'pengurus_karta' | 'ketua_karta' | 'pengurus_rt' | 'warga';
 
 export interface User {
   id: number;
@@ -76,6 +76,13 @@ export interface Activity {
   status: 'draft' | 'published';
   published_at?: string;
   unit?: Unit;
+}
+
+export interface AttendanceMember {
+  id: number;
+  name: string;
+  status: 'hadir' | 'izin' | 'tidak_hadir' | null;
+  note?: string | null;
 }
 
 export interface LetterType {
