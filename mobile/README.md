@@ -69,8 +69,8 @@ Pilihan menjalankan:
 
 ---
 
-## 🛠️ Konfigurasi Alamat API (Backend IP)
-Secara default aplikasi mengarah ke IP lokal mesin (`http://192.168.1.27:8000/api`). Jika menggunakan emulator atau perangkat lain, alamat dapat diubah langsung dari aplikasi melalui menu pengaturan:
+## 🛠️ Konfigurasi Alamat API
+Secara default aplikasi mengarah ke backend staging (`https://api.my23.my.id/api`). Untuk pengembangan lokal, alamat dapat diubah langsung dari aplikasi melalui menu pengaturan:
 - **Ponsel Fisik (LAN Wi-Fi):** `http://192.168.1.27:8000/api`
 - **Android Emulator:** `http://10.0.2.2:8000/api`
 - **Web / Localhost:** `http://127.0.0.1:8000/api`

@@ -22,6 +22,7 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ visible, onClose }) =>
   const [urlInput, setUrlInput] = useState(backendUrl);
 
   const presets = [
+    { label: 'Server Staging', url: DEFAULT_BASE_URL },
     { label: 'LAN IP (192.168.1.27)', url: 'http://192.168.1.27:8000/api' },
     { label: 'Android Emulator (10.0.2.2)', url: 'http://10.0.2.2:8000/api' },
     { label: 'Localhost Web (127.0.0.1)', url: 'http://127.0.0.1:8000/api' },
@@ -53,7 +54,7 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ visible, onClose }) =>
             style={styles.input}
             value={urlInput}
             onChangeText={setUrlInput}
-            placeholder="http://192.168.1.27:8000/api"
+            placeholder={DEFAULT_BASE_URL}
             placeholderTextColor={colors.textLight}
             autoCapitalize="none"
             autoCorrect={false}

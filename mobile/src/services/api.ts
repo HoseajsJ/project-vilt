@@ -23,8 +23,8 @@ import {
 const STORAGE_KEY_TOKEN = '@desa_pintar_jwt';
 const STORAGE_KEY_BASE_URL = '@desa_pintar_base_url';
 
-// Default to LAN IP 192.168.1.27 or fallback to localhost
-export const DEFAULT_BASE_URL = 'http://192.168.1.27:8000/api';
+// Staging API is the default for installed builds; local addresses are migrated below.
+export const DEFAULT_BASE_URL = 'https://api.my23.my.id/api';
 
 let mockIdCounter = Date.now();
 const isApiNetworkError = (error: unknown) => !(error instanceof ApiRequestError) || error.status >= 500;
@@ -44,7 +44,13 @@ class ApiService {
     try {
       const storedUrl = await AsyncStorage.getItem(STORAGE_KEY_BASE_URL);
       if (storedUrl) {
-        if (storedUrl.includes('192.168.1.6')) {
+        if (
+          storedUrl.includes('192.168.1.6') ||
+          storedUrl.includes('192.168.1.27:8000') ||
+          storedUrl.includes('10.0.2.2:8000') ||
+          storedUrl.includes('localhost:8000') ||
+          storedUrl.includes('127.0.0.1:8000')
+        ) {
           this.baseUrl = DEFAULT_BASE_URL;
           await AsyncStorage.setItem(STORAGE_KEY_BASE_URL, DEFAULT_BASE_URL);
         } else {
