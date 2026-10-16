@@ -25,6 +25,8 @@ const STORAGE_KEY_BASE_URL = '@desa_pintar_base_url';
 // Default to LAN IP 192.168.1.6 or fallback to localhost
 export const DEFAULT_BASE_URL = 'http://192.168.1.6:8000/api';
 
+let mockIdCounter = Date.now();
+
 class ApiService {
   private baseUrl: string = DEFAULT_BASE_URL;
   private token: string | null = null;
@@ -235,7 +237,7 @@ class ApiService {
       return res.data;
     } catch {
       const newAct: Activity = {
-        id: Date.now(),
+        id: mockIdCounter++,
         title: activity.title || '',
         category: activity.category || 'sosial',
         activity_date: activity.activity_date || new Date().toISOString(),
@@ -297,7 +299,7 @@ class ApiService {
     } catch {
       const type = mockLetterTypes.find((t) => t.id === letter_type_id);
       const newReq: LetterRequest = {
-        id: Date.now(),
+        id: mockIdCounter++,
         user_id: 2,
         letter_type_id,
         status: 'menunggu_review',
@@ -359,7 +361,7 @@ class ApiService {
       return res.data;
     } catch {
       const newC: CitizenComplaint = {
-        id: Date.now(),
+        id: mockIdCounter++,
         reporter_id: 2,
         category: complaint.category,
         description: complaint.description,

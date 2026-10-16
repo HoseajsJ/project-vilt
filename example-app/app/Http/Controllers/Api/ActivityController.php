@@ -15,9 +15,10 @@ class ActivityController extends Controller
     /**
      * List activities for Pengurus (includes draft & published)
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $activities = Activity::query()
+            ->when(! $request->user()->isKarta(), fn ($query) => $query->where('category', '!=', 'rapat'))
             ->with(['unit'])
             ->orderByDesc('activity_date')
             ->get();
@@ -37,6 +38,7 @@ class ActivityController extends Controller
     {
         $activities = Activity::query()
             ->where('status', 'published')
+            ->where('category', '!=', 'rapat')
             ->with(['unit'])
             ->orderByDesc('activity_date')
             ->get();
@@ -52,7 +54,7 @@ class ActivityController extends Controller
     /**
      * Show activity detail
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $activity = Activity::query()->with('unit')->find($id);
         if (!$activity) {
@@ -62,6 +64,10 @@ class ActivityController extends Controller
                 'message' => 'Kegiatan tidak ditemukan',
                 'data' => null,
             ], 404);
+        }
+
+        if ($activity->category === 'rapat' && ! $request->user()->isKarta()) {
+            return response()->json(['status_code' => 403, 'status' => false, 'message' => 'Jadwal rapat hanya untuk pengurus Karta', 'data' => null], 403);
         }
 
         return response()->json([
@@ -86,6 +92,10 @@ class ActivityController extends Controller
             'location' => 'nullable|string|max:150',
             'image_url' => 'nullable|string',
         ]);
+
+        if ($request->input('category') === 'rapat' && ! $request->user()->isKetuaKarta()) {
+            return response()->json(['status_code' => 403, 'status' => false, 'message' => 'Hanya Ketua Karta yang dapat membuat rapat', 'data' => null], 403);
+        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -119,30 +129,40 @@ class ActivityController extends Controller
     /**
      * Publish activity (Pengurus) -> triggers notification to all active warga
      */
-    public function publish(int $id): JsonResponse
+    public function publish(Request $request, int $id): JsonResponse
     {
         $activity = Activity::query()->find($id);
         if (!$activity) {
             return response()->json(['status_code' => 404, 'status' => false, 'message' => 'Kegiatan tidak ditemukan', 'data' => null], 404);
         }
 
+        if ($activity->category === 'rapat' && ! $request->user()->isKetuaKarta()) {
+            return response()->json(['status_code' => 403, 'status' => false, 'message' => 'Hanya Ketua Karta yang dapat mengelola rapat', 'data' => null], 403);
+        }
+
+        $shouldNotify = $activity->status !== 'published';
         $activity->update([
             'status' => 'published',
             'published_at' => now(),
         ]);
 
-        // Create notification for active warga
-        $wargaUsers = User::query()->where('role', User::ROLE_WARGA)->where('status', User::STATUS_ACTIVE)->get();
-        foreach ($wargaUsers as $u) {
-            Notification::create([
-                'user_id' => $u->id,
-                'category' => 'activity',
-                'title' => 'Kegiatan Baru Dipublikasikan: ' . $activity->title,
-                'body' => $activity->description ? mb_strimwidth($activity->description, 0, 100, '...') : 'Ada kegiatan baru dari Karang Taruna RW.',
-                'ref_type' => 'activity',
-                'ref_id' => $activity->id,
-                'is_read' => 0,
-            ]);
+        if ($shouldNotify) {
+            // Rapat are private to Karta; other activities notify active residents.
+            $recipients = $activity->category === 'rapat'
+                ? User::query()->whereIn('role', [User::ROLE_PENGURUS, User::ROLE_KETUA_KARTA])->where('status', User::STATUS_ACTIVE)->get()
+                : User::query()->where('role', User::ROLE_WARGA)->where('status', User::STATUS_ACTIVE)->get();
+            foreach ($recipients as $u) {
+                Notification::create([
+                    'user_id' => $u->id,
+                    'category' => 'activity',
+                    'title' => 'Kegiatan Baru: ' . $activity->title,
+                    'body' => $activity->description ? mb_strimwidth($activity->description, 0, 100, '...') : ($activity->category === 'rapat' ? 'Ada jadwal rapat baru Karang Taruna.' : 'Ada kegiatan baru dari lingkungan RW.'),
+                    'ref_type' => 'activity',
+                    'ref_id' => $activity->id,
+                    'is_read' => 0,
+                    'created_at' => now(),
+                ]);
+            }
         }
 
         return response()->json([

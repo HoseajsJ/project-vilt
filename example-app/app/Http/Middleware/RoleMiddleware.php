@@ -32,7 +32,7 @@ class RoleMiddleware
             if (
                 $normalizedRole === $userRoleName ||
                 $normalizedRole === $userRoleId ||
-                ($normalizedRole === 'pengurus' && in_array($userRoleName, ['pengurus', 'pengurus_karta', 'pengurus_rt']))
+                ($normalizedRole === 'pengurus' && in_array($userRoleName, ['pengurus', 'pengurus_karta', 'pengurus_rt', 'ketua_karta']))
             ) {
                 $hasAccess = true;
                 break;

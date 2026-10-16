@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Validator;
 
 class ComplaintController extends Controller
@@ -59,7 +60,7 @@ class ComplaintController extends Controller
             'category' => 'required|string',
             'description' => 'required|string',
             'location' => 'required|string|max:150',
-            'photo_url' => 'nullable|string',
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10000',
         ]);
 
         if ($validator->fails()) {
@@ -71,17 +72,21 @@ class ComplaintController extends Controller
             ], 422);
         }
 
+        $photoUrl = $request->hasFile('photo')
+            ? $request->getSchemeAndHttpHost() . '/storage/' . $request->file('photo')->store('complaints', 'public')
+            : null;
+
         $complaint = CitizenComplaint::create([
             'reporter_id' => $request->user()->id,
             'category' => $request->input('category'),
             'description' => $request->input('description'),
             'location' => $request->input('location'),
-            'photo_url' => $request->input('photo_url'),
+            'photo_url' => $photoUrl,
             'status' => 'baru',
         ]);
 
         // Notify pengurus & RT
-        $staff = User::query()->whereIn('role', [User::ROLE_PENGURUS, User::ROLE_PENGURUS_RT])->get();
+        $staff = User::query()->whereIn('role', [User::ROLE_PENGURUS, User::ROLE_KETUA_KARTA, User::ROLE_PENGURUS_RT])->get();
         foreach ($staff as $s) {
             Notification::create([
                 'user_id' => $s->id,
@@ -147,6 +152,59 @@ class ComplaintController extends Controller
             'status_code' => 200,
             'status' => true,
             'message' => 'Status pengaduan berhasil diperbarui',
+            'data' => $complaint,
+        ]);
+    }
+
+    public function updateStatusAll(Request $request) // implementasi untuk update status pengaduan dari semua pengurus.
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:baru,diproses,selesai',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status_code' => 422,
+                'status' => false,
+                'message' => 'Status tidak valid',
+                'data' => $validator->errors(),
+            ], 422);
+        }
+    }
+
+    // implementasi untuk upload file pengaduan.
+    public function uploadFile(Request $request, int $id): JsonResponse
+    {
+        $complaint = CitizenComplaint::query()->find($id);
+        if (!$complaint) {
+            return response()->json(['status_code' => 404, 'status' => false, 'message' => 'Pengaduan tidak ditemukan', 'data' => null], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|max:10000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status_code' => 422,
+                'status' => false,
+                'message' => 'File tidak valid',
+                'data' => $validator->errors(),
+            ], 422);
+        }
+
+        $file = $request->file('file');
+        $filename = time() . '-' . $file->getClientOriginalName();
+        $file->move(public_path('complaints/' . $filename));
+
+        $complaint->update([
+            'photo_url' => asset('complaints/' . $filename),
+        ]);
+
+        return response()->json([
+            'status_code' => 200,
+            'status' => true,
+            'message' => 'File pengaduan berhasil diupload',
             'data' => $complaint,
         ]);
     }

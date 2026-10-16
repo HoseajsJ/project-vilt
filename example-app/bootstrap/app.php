@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\LogApiRequests;
 use App\Http\Middleware\JwtAuth;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
@@ -17,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->api(append: [LogApiRequests::class]);
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

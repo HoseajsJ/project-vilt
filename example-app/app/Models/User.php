@@ -18,6 +18,8 @@ class User extends Authenticatable
 
     public const ROLE_PENGURUS_RT = 3;
 
+    public const ROLE_KETUA_KARTA = 4;
+
     public const STATUS_INACTIVE = 0;
 
     public const STATUS_ACTIVE = 1;
@@ -60,6 +62,11 @@ class User extends Authenticatable
         return $this->hasMany(PushToken::class, 'user_id');
     }
 
+    public function kartaAttendances(): HasMany
+    {
+        return $this->hasMany(KartaAttendance::class);
+    }
+
     public function isPengurus(): bool
     {
         return (int) $this->role === self::ROLE_PENGURUS;
@@ -75,6 +82,16 @@ class User extends Authenticatable
         return (int) $this->role === self::ROLE_PENGURUS_RT;
     }
 
+    public function isKetuaKarta(): bool
+    {
+        return (int) $this->role === self::ROLE_KETUA_KARTA;
+    }
+
+    public function isKarta(): bool
+    {
+        return in_array((int) $this->role, [self::ROLE_PENGURUS, self::ROLE_KETUA_KARTA], true);
+    }
+
     public function isActive(): bool
     {
         return (int) $this->status === self::STATUS_ACTIVE;
@@ -85,6 +102,7 @@ class User extends Authenticatable
         return match ((int) $this->role) {
             self::ROLE_PENGURUS => 'pengurus_karta',
             self::ROLE_PENGURUS_RT => 'pengurus_rt',
+            self::ROLE_KETUA_KARTA => 'ketua_karta',
             default => 'warga',
         };
     }

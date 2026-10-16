@@ -95,7 +95,7 @@ class LetterController extends Controller
         ]);
 
         // Notify RT
-        $rtUsers = User::query()->whereIn('role', [User::ROLE_PENGURUS_RT, User::ROLE_PENGURUS])->get();
+        $rtUsers = User::query()->whereIn('role', [User::ROLE_PENGURUS_RT, User::ROLE_PENGURUS, User::ROLE_KETUA_KARTA])->get();
         foreach ($rtUsers as $rt) {
             Notification::create([
                 'user_id' => $rt->id,

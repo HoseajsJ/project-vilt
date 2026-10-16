@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ComplaintController;
 use App\Http\Controllers\Api\LetterController;
+use App\Http\Controllers\Api\KartaAttendanceController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UnitController;
 use App\Models\Activity;
@@ -82,6 +83,13 @@ Route::middleware('jwt.auth')->group(function () {
         ]);
     });
 
+    // Activity management includes Ketua Karta; controller limits rapat actions to that role.
+    Route::middleware('role:pengurus,pengurus_karta,pengurus_rt,ketua_karta')->group(function () {
+        Route::get('/activities', [ActivityController::class, 'index']);
+        Route::post('/activities', [ActivityController::class, 'store']);
+        Route::patch('/activities/{id}/publish', [ActivityController::class, 'publish']);
+    });
+
     // 3. Pengurus & Pengurus RT Endpoints
     Route::middleware('role:pengurus,pengurus_karta,pengurus_rt')->group(function () {
 
@@ -122,11 +130,6 @@ Route::middleware('jwt.auth')->group(function () {
         Route::patch('/alerts/{id}/acknowledge', [UnitController::class, 'acknowledgeAlert']);
         Route::patch('/alerts/{id}/resolve', [UnitController::class, 'resolveAlert']);
 
-        // Activities Management
-        Route::get('/activities', [ActivityController::class, 'index']);
-        Route::post('/activities', [ActivityController::class, 'store']);
-        Route::patch('/activities/{id}/publish', [ActivityController::class, 'publish']);
-
         // Complaints Handling
         Route::get('/complaints', [ComplaintController::class, 'index']);
         Route::patch('/complaints/{id}/status', [ComplaintController::class, 'updateStatus']);
@@ -134,5 +137,10 @@ Route::middleware('jwt.auth')->group(function () {
         // Letter Requests Handling
         Route::get('/letter-requests', [LetterController::class, 'index']);
         Route::patch('/letter-requests/{id}/status', [LetterController::class, 'updateStatus']);
+    });
+
+    Route::middleware('role:pengurus_karta,ketua_karta')->prefix('karta')->group(function () {
+        Route::get('/meetings/{activityId}/attendance', [KartaAttendanceController::class, 'index']);
+        Route::put('/meetings/{activityId}/attendance', [KartaAttendanceController::class, 'update']);
     });
 });
