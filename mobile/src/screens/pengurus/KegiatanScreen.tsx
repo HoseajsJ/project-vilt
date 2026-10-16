@@ -18,6 +18,20 @@ import { colors } from '../../theme/colors';
 import { Activity, AttendanceMember } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
+const isValidCalendarDate = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  return date.getFullYear() === year
+    && date.getMonth() === month - 1
+    && date.getDate() === day;
+};
+
 export const KegiatanScreen: React.FC = () => {
   const { role, user } = useAuth();
   const isKarta = role === 'pengurus_karta' || role === 'ketua_karta';
@@ -40,9 +54,8 @@ export const KegiatanScreen: React.FC = () => {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const validMeetingDate = /^\d{4}-\d{2}-\d{2}$/.test(meetingDate)
-    && !Number.isNaN(new Date(`${meetingDate}T00:00:00`).getTime())
-    && new Date(`${meetingDate}T00:00:00`).toISOString().slice(0, 10) === meetingDate;
+  const validMeetingDate = isValidCalendarDate(meetingDate);
+  const validMeetingTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(meetingTime);
 
   const loadData = async () => {
     try {
@@ -103,7 +116,7 @@ export const KegiatanScreen: React.FC = () => {
 
   const handleCreateActivity = async () => {
     if (!title.trim()) return;
-    if (category === 'rapat' && (!validMeetingDate || !/^([01]\d|2[0-3]):[0-5]\d$/.test(meetingTime))) return;
+    if (category === 'rapat' && (!validMeetingDate || !validMeetingTime)) return;
     setSaving(true);
     try {
       const created = await api.createActivity({
@@ -123,8 +136,11 @@ export const KegiatanScreen: React.FC = () => {
       setDescription('');
       setMeetingDate('');
       setMeetingTime('19:00');
-    } catch {
-      // handled
+    } catch (error) {
+      Alert.alert(
+        'Gagal menyimpan kegiatan',
+        error instanceof Error ? error.message : 'Periksa koneksi API lalu coba lagi.',
+      );
     } finally {
       setSaving(false);
     }
@@ -259,9 +275,9 @@ export const KegiatanScreen: React.FC = () => {
               />
 
               <TouchableOpacity
-                style={[styles.submitBtn, saving && styles.submitBtnDisabled]}
+                style={[styles.submitBtn, (saving || !title.trim() || (category === 'rapat' && (!validMeetingDate || !validMeetingTime))) && styles.submitBtnDisabled]}
                 onPress={handleCreateActivity}
-                disabled={saving || !title.trim() || (category === 'rapat' && (!validMeetingDate || !/^([01]\d|2[0-3]):[0-5]\d$/.test(meetingTime)))}
+                disabled={saving || !title.trim() || (category === 'rapat' && (!validMeetingDate || !validMeetingTime))}
               >
                 {saving ? (
                   <ActivityIndicator color="#FFF" />
