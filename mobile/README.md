@@ -48,6 +48,8 @@ npx eas-cli build --platform android --profile production
 
 Push notification memerlukan build native dengan `expo-notifications`; Expo Go tidak dapat menguji konfigurasi push produksi. Setelah build terpasang dan pengguna memberi izin, token perangkat tersimpan di backend dan notifikasi API akan dikirim lewat Expo Push Service.
 
+Fitur kamera, lokasi GPS, dan kalender jadwal juga memakai modul native. Setelah backend terbaru dideploy, jalankan migrasi `php artisan migrate --force` di folder `example-app` untuk menyimpan koordinat aduan. Setelah itu buat build baru agar izin kamera/lokasi dan modul date picker tersedia di perangkat.
+
 Untuk update JavaScript/aset yang kompatibel dengan binary terpasang:
 
 ```bash

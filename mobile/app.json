@@ -16,7 +16,15 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Izinkan my23 mengakses foto untuk melampirkan bukti pengaduan."
+          "photosPermission": "Izinkan my23 mengakses foto untuk melampirkan bukti pengaduan.",
+          "cameraPermission": "Izinkan my23 menggunakan kamera untuk mengambil bukti pengaduan.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Izinkan my23 mengakses lokasi saat melaporkan masalah agar titik kejadian lebih akurat."
         }
       ],
       "expo-notifications",

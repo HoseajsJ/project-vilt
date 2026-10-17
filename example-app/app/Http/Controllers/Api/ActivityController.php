@@ -86,11 +86,12 @@ class ActivityController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:150',
             'description' => 'nullable|string',
-            'category' => 'required|string',
+            'category' => 'required|in:budidaya,lingkungan,sosial,rapat',
             'unit_id' => 'nullable|integer',
-            'activity_date' => 'required',
+            'activity_date' => 'required|date',
             'location' => 'nullable|string|max:150',
-            'image_url' => 'nullable|string',
+            'image_url' => 'nullable|string|max:255',
+            'status' => 'nullable|in:draft,published',
         ]);
 
         if ($request->input('category') === 'rapat' && ! $request->user()->isKetuaKarta()) {

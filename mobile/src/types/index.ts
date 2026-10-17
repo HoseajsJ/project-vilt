@@ -114,6 +114,8 @@ export interface CitizenComplaint {
   category: 'keamanan' | 'lingkungan' | 'infrastruktur' | 'sosial' | 'lainnya' | string;
   description: string;
   location: string;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   photo_url?: string;
   status: 'baru' | 'diproses' | 'selesai';
   handler_note?: string;

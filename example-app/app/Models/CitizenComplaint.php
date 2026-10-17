@@ -17,6 +17,8 @@ class CitizenComplaint extends Model
         'category',
         'description',
         'location',
+        'latitude',
+        'longitude',
         'photo_url',
         'status',
         'handled_by',

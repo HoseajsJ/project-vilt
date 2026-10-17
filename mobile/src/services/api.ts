@@ -394,6 +394,8 @@ class ApiService {
     category: string;
     description: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
     photo?: { uri: string; name: string; type: string; base64?: string | null };
   }): Promise<CitizenComplaint> {
     try {
@@ -404,6 +406,8 @@ class ApiService {
             category: complaint.category,
             description: complaint.description,
             location: complaint.location,
+            latitude: complaint.latitude,
+            longitude: complaint.longitude,
           }),
         });
         return res.data;
@@ -413,6 +417,8 @@ class ApiService {
       body.append('category', complaint.category);
       body.append('description', complaint.description);
       body.append('location', complaint.location);
+      if (complaint.latitude !== undefined) body.append('latitude', String(complaint.latitude));
+      if (complaint.longitude !== undefined) body.append('longitude', String(complaint.longitude));
 
       let bytes: Uint8Array;
       if (complaint.photo.base64) {

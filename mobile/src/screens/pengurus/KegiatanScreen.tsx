@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import {
   ActivityIndicator,
   Alert,
@@ -32,6 +34,13 @@ const isValidCalendarDate = (value: string) => {
     && date.getDate() === day;
 };
 
+const formatLocalDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const KegiatanScreen: React.FC = () => {
   const { role, user } = useAuth();
   const isKarta = role === 'pengurus_karta' || role === 'ketua_karta';
@@ -46,7 +55,8 @@ export const KegiatanScreen: React.FC = () => {
   const [category, setCategory] = useState<'budidaya' | 'lingkungan' | 'sosial' | 'rapat'>('lingkungan');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
-  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingDate, setMeetingDate] = useState(formatLocalDate(new Date(Date.now() + 86400000 * 3)));
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [meetingTime, setMeetingTime] = useState('19:00');
   const [selectedMeeting, setSelectedMeeting] = useState<Activity | null>(null);
   const [attendanceMembers, setAttendanceMembers] = useState<AttendanceMember[]>([]);
@@ -116,7 +126,7 @@ export const KegiatanScreen: React.FC = () => {
 
   const handleCreateActivity = async () => {
     if (!title.trim()) return;
-    if (category === 'rapat' && (!validMeetingDate || !validMeetingTime)) return;
+    if (!validMeetingDate || (category === 'rapat' && !validMeetingTime)) return;
     setSaving(true);
     try {
       const created = await api.createActivity({
@@ -124,9 +134,7 @@ export const KegiatanScreen: React.FC = () => {
         category,
         location: location.trim() || 'Balai RW 05',
         description: description.trim(),
-        activity_date: category === 'rapat'
-          ? new Date(`${meetingDate}T${meetingTime}:00`).toISOString()
-          : new Date(Date.now() + 86400000 * 3).toISOString(),
+        activity_date: new Date(`${meetingDate}T${category === 'rapat' ? meetingTime : '09:00'}:00`).toISOString(),
         status: 'draft',
       });
       setActivities([created, ...activities]);
@@ -134,7 +142,7 @@ export const KegiatanScreen: React.FC = () => {
       setTitle('');
       setLocation('');
       setDescription('');
-      setMeetingDate('');
+      setMeetingDate(formatLocalDate(new Date(Date.now() + 86400000 * 3)));
       setMeetingTime('19:00');
     } catch (error) {
       Alert.alert(
@@ -244,10 +252,27 @@ export const KegiatanScreen: React.FC = () => {
                 ))}
               </View>
 
+              <Text style={styles.label}>{category === 'rapat' ? 'Tanggal rapat *' : 'Tanggal kegiatan *'}</Text>
+              <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(true)}>
+                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                <Text style={styles.datePickerText}>{meetingDate}</Text>
+                <Text style={styles.datePickerHint}>Pilih tanggal</Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={isValidCalendarDate(meetingDate) ? new Date(`${meetingDate}T12:00:00`) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'android' ? 'calendar' : 'spinner'}
+                  minimumDate={new Date()}
+                  onChange={(_event: DateTimePickerEvent, selectedDate?: Date) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) setMeetingDate(formatLocalDate(selectedDate));
+                  }}
+                />
+              )}
+
               {category === 'rapat' && (
                 <>
-                  <Text style={styles.label}>Tanggal rapat (YYYY-MM-DD) *</Text>
-                  <TextInput style={styles.input} placeholder="2026-10-30" value={meetingDate} onChangeText={setMeetingDate} />
                   <Text style={styles.label}>Waktu rapat (24 jam) *</Text>
                   <TextInput style={styles.input} placeholder="19:00" value={meetingTime} onChangeText={setMeetingTime} />
                   <Text style={styles.meetingHint}>Jadwal ini hanya terlihat oleh pengurus Karta.</Text>
@@ -275,9 +300,9 @@ export const KegiatanScreen: React.FC = () => {
               />
 
               <TouchableOpacity
-                style={[styles.submitBtn, (saving || !title.trim() || (category === 'rapat' && (!validMeetingDate || !validMeetingTime))) && styles.submitBtnDisabled]}
+                style={[styles.submitBtn, (saving || !title.trim() || !validMeetingDate || (category === 'rapat' && !validMeetingTime)) && styles.submitBtnDisabled]}
                 onPress={handleCreateActivity}
-                disabled={saving || !title.trim() || (category === 'rapat' && (!validMeetingDate || !validMeetingTime))}
+                disabled={saving || !title.trim() || !validMeetingDate || (category === 'rapat' && !validMeetingTime)}
               >
                 {saving ? (
                   <ActivityIndicator color="#FFF" />
@@ -466,6 +491,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 12,
   },
+  datePickerButton: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surfaceSubtle, borderRadius: 8, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 12 },
+  datePickerText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '700' },
+  datePickerHint: { color: colors.primary, fontSize: 12, fontWeight: '700' },
   textArea: {
     minHeight: 70,
     textAlignVertical: 'top',

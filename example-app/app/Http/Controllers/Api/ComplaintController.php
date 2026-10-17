@@ -60,6 +60,8 @@ class ComplaintController extends Controller
             'category' => 'required|string',
             'description' => 'required|string',
             'location' => 'required|string|max:150',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10000',
         ]);
 
@@ -81,6 +83,8 @@ class ComplaintController extends Controller
             'category' => $request->input('category'),
             'description' => $request->input('description'),
             'location' => $request->input('location'),
+            'latitude' => $request->input('latitude'),
+            'longitude' => $request->input('longitude'),
             'photo_url' => $photoUrl,
             'status' => 'baru',
         ]);

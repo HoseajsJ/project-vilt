@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +25,8 @@ export const PengaduanScreen: React.FC = () => {
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [gettingLocation, setGettingLocation] = useState(false);
   const [myComplaints, setMyComplaints] = useState<CitizenComplaint[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,6 +54,11 @@ export const PengaduanScreen: React.FC = () => {
   };
 
   const choosePhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Izin dibutuhkan', 'Izinkan akses galeri untuk memilih foto bukti pengaduan.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -58,6 +66,33 @@ export const PengaduanScreen: React.FC = () => {
       base64: true,
     });
     if (!result.canceled) setPhoto(result.assets[0]);
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Izin dibutuhkan', 'Izinkan akses kamera untuk mengambil foto bukti pengaduan.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8, base64: true });
+    if (!result.canceled) setPhoto(result.assets[0]);
+  };
+
+  const useCurrentLocation = async () => {
+    setGettingLocation(true);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Izin dibutuhkan', 'Izinkan akses lokasi saat digunakan untuk menambahkan titik kejadian.');
+        return;
+      }
+      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setCoordinates({ latitude: current.coords.latitude, longitude: current.coords.longitude });
+    } catch (error) {
+      Alert.alert('Lokasi tidak tersedia', error instanceof Error ? error.message : 'Periksa pengaturan lokasi perangkat.');
+    } finally {
+      setGettingLocation(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -71,6 +106,8 @@ export const PengaduanScreen: React.FC = () => {
       const created = await api.submitComplaint({
         category,
         location: location.trim(),
+        latitude: coordinates?.latitude,
+        longitude: coordinates?.longitude,
         description: description.trim(),
         photo: photo ? {
           uri: photo.uri,
@@ -83,6 +120,7 @@ export const PengaduanScreen: React.FC = () => {
       setLocation('');
       setDescription('');
       setPhoto(null);
+      setCoordinates(null);
       setActiveTab('history');
       Alert.alert(
         'Laporan Terkirim',
@@ -207,6 +245,11 @@ export const PengaduanScreen: React.FC = () => {
             value={location}
             onChangeText={setLocation}
           />
+          <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={gettingLocation}>
+            {gettingLocation ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="navigate-outline" size={18} color={colors.primary} />}
+            <Text style={styles.photoButtonText}>{coordinates ? 'Perbarui titik GPS' : 'Gunakan lokasi saya'}</Text>
+          </TouchableOpacity>
+          {coordinates ? <Text style={styles.coordinateText}>Titik tersimpan: {coordinates.latitude.toFixed(6)}, {coordinates.longitude.toFixed(6)}</Text> : null}
 
           <Text style={[styles.sectionHeading, { marginTop: 14 }]}>
             Deskripsi Pengaduan *
@@ -223,9 +266,13 @@ export const PengaduanScreen: React.FC = () => {
 
           <Text style={[styles.sectionHeading, { marginTop: 14 }]}>Foto Pendukung (opsional)</Text>
           <View style={styles.photoActions}>
-            <TouchableOpacity style={styles.photoButton} onPress={choosePhoto}>
+            <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
               <Ionicons name="camera-outline" size={18} color={colors.primary} />
-              <Text style={styles.photoButtonText}>{photo ? 'Ganti foto' : 'Pilih foto keluhan'}</Text>
+              <Text style={styles.photoButtonText}>Ambil foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.photoButton} onPress={choosePhoto}>
+              <Ionicons name="images-outline" size={18} color={colors.primary} />
+              <Text style={styles.photoButtonText}>Galeri</Text>
             </TouchableOpacity>
             {photo ? (
               <TouchableOpacity style={styles.photoRemoveButton} onPress={() => setPhoto(null)}>
@@ -403,6 +450,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   photoActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  locationButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, marginTop: -4, marginBottom: 8, borderRadius: 8, backgroundColor: colors.primaryLight },
+  coordinateText: { color: colors.textMuted, fontSize: 11, marginBottom: 8 },
   photoButton: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   photoButtonText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
   photoRemoveButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' },
