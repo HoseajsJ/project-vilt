@@ -54,7 +54,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({
   const resolvePhotoUrl = (url?: string | null) => {
     if (!url) return null;
     const base = api.getBaseUrl().replace(/\/api\/?$/, '');
-    if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('192.168.1.6')) {
+    if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('192.168.') || url.includes('10.0.2.2')) {
       return url.replace(/^https?:\/\/[^/]+/, base);
     }
     return url;

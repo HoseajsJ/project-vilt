@@ -1,6 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import {
   Alert,
   ActivityIndicator,
@@ -28,6 +32,15 @@ import { api } from './src/services/api';
 import { colors } from './src/theme/colors';
 import { AppNotification } from './src/types';
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 function MainApp() {
   const { user, role, isLoading, isRtOrPengurus } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -35,6 +48,29 @@ function MainApp() {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (!user || !Device.isDevice) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const permission = await Notifications.getPermissionsAsync();
+        const granted = permission.granted || (await Notifications.requestPermissionsAsync()).granted;
+        if (!granted || cancelled) return;
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'Notifikasi', importance: Notifications.AndroidImportance.HIGH,
+          });
+        }
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+        const token = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)).data;
+        if (!cancelled) await api.registerPushToken(token, Platform.OS);
+      } catch (error) {
+        console.warn('Gagal mendaftarkan push notification', error);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   // Set default tab on role switch
   useEffect(() => {

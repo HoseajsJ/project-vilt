@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Services\ExpoPushService;
 
 class Notification extends Model
 {
@@ -13,6 +14,13 @@ class Notification extends Model
     public $timestamps = false;
 
     protected $table = 'notifications';
+
+    protected static function booted(): void
+    {
+        static::created(function (self $notification): void {
+            app(ExpoPushService::class)->sendToUser($notification);
+        });
+    }
 
     protected $fillable = [
         'user_id',

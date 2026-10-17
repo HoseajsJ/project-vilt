@@ -36,6 +36,27 @@ Aplikasi mobile berbasis **React Native Expo** untuk platform terpadu **Desa Pin
 
 ## 🚀 Menjalankan Aplikasi
 
+### Push notification & OTA (EAS)
+
+Login EAS dan siapkan kredensial push Android (FCM) serta iOS (APNs) sebelum distribusi:
+
+```bash
+npx eas-cli login
+npx eas-cli credentials
+npx eas-cli build --platform android --profile production
+```
+
+Push notification memerlukan build native dengan `expo-notifications`; Expo Go tidak dapat menguji konfigurasi push produksi. Setelah build terpasang dan pengguna memberi izin, token perangkat tersimpan di backend dan notifikasi API akan dikirim lewat Expo Push Service.
+
+Untuk update JavaScript/aset yang kompatibel dengan binary terpasang:
+
+```bash
+npx eas-cli update --channel preview --message "Ringkasan perubahan"
+npx eas-cli update --channel production --message "Ringkasan perubahan"
+```
+
+Update native seperti menambah/mengubah modul native, permission, atau konfigurasi app memerlukan build baru. Channel `preview` dan `production` dipetakan ke profil build masing-masing di `eas.json`.
+
 ### 1. Pastikan Backend Laravel Berjalan
 Backend berjalan di port `8000`:
 ```bash

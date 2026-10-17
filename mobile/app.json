@@ -3,6 +3,8 @@
     "name": "my23 Desa Pintar",
     "slug": "my23-desa-pintar",
     "version": "1.0.0",
+    "runtimeVersion": { "policy": "appVersion" },
+    "updates": { "url": "https://u.expo.dev/cd658f49-d3fa-49f0-b825-2d2f3629f075", "checkAutomatically": "ON_LOAD", "fallbackToCacheTimeout": 0 },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -16,7 +18,9 @@
         {
           "photosPermission": "Izinkan my23 mengakses foto untuk melampirkan bukti pengaduan."
         }
-      ]
+      ],
+      "expo-notifications",
+      "expo-updates"
     ],
     "userInterfaceStyle": "light",
     "primaryColor": "#059669",
@@ -30,7 +34,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "id.my23desa.desapintar"
     },
     "web": {
       "favicon": "./assets/favicon.png"

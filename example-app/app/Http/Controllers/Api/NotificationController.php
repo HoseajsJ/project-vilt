@@ -4,11 +4,25 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
+use App\Models\PushToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    public function registerPushToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string', 'max:255', 'regex:/^(Exponent|Expo)PushToken\\[[A-Za-z0-9_-]+\\]$/'],
+            'platform' => ['required', 'in:android,ios'],
+        ]);
+        PushToken::query()->updateOrCreate(
+            ['token' => $validated['token']],
+            ['user_id' => $request->user()->id, 'platform' => $validated['platform'], 'created_at' => now()],
+        );
+        return response()->json(['status_code' => 200, 'status' => true, 'message' => 'Token push terdaftar', 'data' => null]);
+    }
+
     /**
      * List user notifications
      */

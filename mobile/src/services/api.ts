@@ -501,6 +501,13 @@ class ApiService {
     return res.data || [];
   }
 
+  async registerPushToken(token: string, platform: string): Promise<void> {
+    await this.request<any>('/notifications/push-token', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform }),
+    });
+  }
+
   async getUnreadCount(): Promise<number> {
     const res = await this.request<any>('/notifications/unread-count');
     return res.data?.unread_count ?? 0;
